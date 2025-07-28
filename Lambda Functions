@@ -119,3 +119,5 @@ neighborOp = LAMBDA(rng, dist, fnc, MAKEARRAY(
     ))
   )
 ));
+/* Gets a number from a color */
+=LAMBDA(cll,GET.CELL(63,cll));
