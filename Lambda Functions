@@ -1,1 +1,44 @@
-_dice = {"⚀";"⚁";"⚂";"⚃";"⚄";"⚅"}
+//Returns a list of die
+dice = {"⚀";"⚁";"⚂";"⚃";"⚄";"⚅"};
+//Gets the number of pips on a dice
+pips = LAMBDA(d,UNICODE(d)-9855);
+//Shortened len()-len(substitute()) and divides by length
+countOcc = LAMBDA(str,sub,(LEN(str)-LEN(SUBSTITUTE(str,sub,)))/LEN(sub));
+//Returns a split list of characters from a string
+ltrs = LAMBDA(wrd,[len],[split],LET(_len,MAX(len,1),IF(split,MID(wrd,SEQUENCE(LEN(wrd)/_len,,1,_len),_len),MID(wrd,SEQUENCE(LEN(wrd)-_len+1),_len))));
+//Returns a list of arrows
+arrs = {"←","→","↑","↓","↖","↗","↙","↘"};
+//Returns -1 for arrow pointing left, 1 for right, and 0 for up or down
+arrsLR = {-1,1,0,0,-1,1,-1,1};
+//Returns 0 for arrow pointing left or right, -1 for down, and 1 for up 
+arrsUD = {0,0,1,-1,1,1,-1,-1};
+//Stacks all 3 of the arrows functions
+arrsAll = VSTACK(_arrs,_arrsLR,_arrsUD);
+//EDIT
+arrsComb = LAMBDA([rwMult],[clMult],_arrsLR*IF(ISOMITTED(clMult),1,clMult)+_arrsUD*IF(ISOMITTED(rwMult),1000,rwMult))
+knightLR = {1;1;-1;-1;2;2;-2;-2}
+knightUD = {2;-2;2;-2;1;-1;1;-1}
+knightComb = LAMBDA(Lrmult,UDmult,_knightLR*Lrmult+_knightUD*UDmult)
+dirsComb = LAMBDA(Lrshift,Lrmult,UDshift,UDmult,Lrshift*Lrmult+UDshift*UDmult)
+//Returns a list of card suits
+suits = {"♦";"♥";"♠";"♣"}
+//Returns the opposite card suit
+suitsOpp = {"♥";"♦";"♣";"♠"}
+//Can be used to return a list of cards with their number and suit
+cardOrd = {"A";"2";"3";"4";"5";"6";"7";"8";"9";"1";"J";"Q";"K"}
+//Default gets the unique values and counts them by sorting them in descending order
+mostOf = LAMBDA(rng,[ord],[only],LET(a,UNIQUE(TOCOL(rng,3)),b,MAP(a,LAMBDA(x,SUM(--(IFERROR(x=rng,0))))),sorted,SORT(HSTACK(a,b),2,IF(ISOMITTED(ord),-1,ord)),IF(only,INDEX(sorted,1,2),sorted)))
+//Returns the character that comes after in a list
+nxt = =LAMBDA(arr,[n],[fill],LET(_n,MAX(1,n),_fill,IF(ISOMITTED(fill),"X",fill),IF(ROWS(arr)=1,HSTACK(DROP(arr,,_n),IF(SEQUENCE(,_n),_fill)),VSTACK(DROP(arr,_n),IF(SEQUENCE(_n,COLUMNS(arr)),_fill)))))
+//Returns the previous character in a list
+prev = LAMBDA(arr,[n],[fill],LET(_n,MAX(1,n),_fill,IF(ISOMITTED(fill),"X",fill),IF(ROWS(arr)=1,HSTACK(IF(SEQUENCE(,_n),_fill),DROP(arr,,-_n)),VSTACK(IF(SEQUENCE(_n,COLUMNS(arr)),_fill),DROP(arr,-_n)))))
+//Gives all the possible combinations of numbers (only handles single digits)
+perCom = LAMBDA(n,c,[P0C1],[rep],LET(s,SEQUENCE(,n),--MID(REDUCE("",SEQUENCE(c),LAMBDA(a,w,TOCOL(IFS( IF(P0C1,IF(rep,RIGHT(a)<=s&"",RIGHT(a)<s&""),IF(rep,1,ISERR(FIND(s,a)))),a&s),3))),SEQUENCE(,c),1)))
+//Gives the relative addresses of a range
+addresses = LAMBDA(rng,ADDRESS(ROW(rng),COLUMN(rng),4))
+//Gets the address in steps of a 1000
+rwClNm = LAMBDA(arr,[rwMult],[clMult],IF(ISOMITTED(rwMult),1000,rwMult)*SEQUENCE(ROWS(arr))+IF(ISOMITTED(clMult),1,clMult)*SEQUENCE(,COLUMNS(arr)))
+//Gives the distance from a target in a grid
+distFrom = LAMBDA(mp,trg,func,LET(vals,TOCOL(mp),rws,TOCOL(SEQUENCE(ROWS(mp))+0*SEQUENCE(,COLUMNS(mp))),cls,TOCOL(SEQUENCE(ROWS(mp))*0+SEQUENCE(,COLUMNS(mp))),Mrws,TOROW(FILTER(rws,vals=trg)),Mcls,TOROW(FILTER(cls,vals=trg)),rdist,ABS(rws-Mrws),cdist,ABS(cls-Mcls),dist,BYROW(MAP(rdist,cdist,func),MIN),WRAPROWS(dist,COLUMNS(mp))));
+//EDIT
+neighborOp = LAMBDA(rng,dist,fnc,MAKEARRAY(ROWS(rng),COLUMNS(rng),LAMBDA(r,c,fnc(LET(firstRw,MAX(r-dist,1),firstCl,MAX(c-dist,1),lastRw,MIN(r+dist,ROWS(rng)),lastCl,MIN(c+dist,COLUMNS(rng)),CHOOSECOLS(CHOOSEROWS(rng,SEQUENCE(lastRw-firstRw+1,,firstRw)),SEQUENCE(lastCl-firstCl+1,,firstCl)))))))
