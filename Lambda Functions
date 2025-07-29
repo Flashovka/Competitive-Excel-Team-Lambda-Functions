@@ -20,7 +20,7 @@ arrsLR = {-1,1,0,0,-1,1,-1,1};
 arrsUD = {0,0,1,-1,1,1,-1,-1};
 
 /* Stacks all 3 of the arrows functions */
-arrsAll = VSTACK(_arrs,_arrsLR,_arrsUD);
+arrsAll = VSTACK(arrs, arrsLR, arrsUD);
 
 /* Arrow combinations: customizable with row/col multipliers */
 arrsComb = LAMBDA([rwMult], [clMult], _arrsLR * IF(ISOMITTED(clMult),1,clMult) + _arrsUD * IF(ISOMITTED(rwMult),1000,rwMult));
