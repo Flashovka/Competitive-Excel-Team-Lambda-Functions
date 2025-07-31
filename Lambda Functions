@@ -23,7 +23,7 @@ arrsUD = {0,0,1,-1,1,1,-1,-1};
 arrsAll = VSTACK(arrs, arrsLR, arrsUD);
 
 /* Arrow combinations: customizable with row/col multipliers */
-arrsComb = LAMBDA([rwMult], [clMult], _arrsLR * IF(ISOMITTED(clMult),1,clMult) + _arrsUD * IF(ISOMITTED(rwMult),1000,rwMult));
+arrsComb = LAMBDA([rwMult], [clMult], arrsLR * IF(ISOMITTED(clMult),1,clMult) + arrsUD * IF(ISOMITTED(rwMult),1000,rwMult));
 
 /* Knight movement vectors */
 knightLR = {1;1;-1;-1;2;2;-2;-2};
