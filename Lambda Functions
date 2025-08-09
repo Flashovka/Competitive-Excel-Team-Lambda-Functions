@@ -119,8 +119,6 @@ neighborOp = LAMBDA(rng, dist, fnc, MAKEARRAY(
     ))
   )
 ));
-/* Gets a number from a color */
-getCellColor = LAMBDA(cll,GET.CELL(63,cll));
 /* Checks whether a palindrome is given (answer with TRUE/FALSE). */
 isPalindrome = LAMBDA(text,
     LET(
