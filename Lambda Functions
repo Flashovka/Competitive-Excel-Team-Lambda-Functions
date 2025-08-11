@@ -129,4 +129,12 @@ isPalindrome = LAMBDA(text,
 /* Reverses a string */
 reverseString = LAMBDA(txt,
     TEXTJOIN("",,MID(txt,SEQUENCE(LEN(txt),,LEN(txt),-1),1))
+);
+extractNumbers = LAMBDA(txt,
+    TEXTJOIN("",,
+        IFERROR(
+            MID(txt, SEQUENCE(LEN(txt)), 1) * 1,
+            ""
+        )
+    )
 )
