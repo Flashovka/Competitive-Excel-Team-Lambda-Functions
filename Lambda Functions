@@ -130,6 +130,7 @@ isPalindrome = LAMBDA(text,
 reverseString = LAMBDA(txt,
     TEXTJOIN("",,MID(txt,SEQUENCE(LEN(txt),,LEN(txt),-1),1))
 );
+/* Extracts numbers from a string */
 extractNumbers = LAMBDA(txt,
     TEXTJOIN("",,
         IFERROR(
@@ -137,4 +138,43 @@ extractNumbers = LAMBDA(txt,
             ""
         )
     )
+);
+notInText = LAMBDA(TextOrRange, CaseSensitive, Mode,
+  LET(
+    txt, TEXTJOIN("",,TextOrRange),
+    n, LEN(txt),
+
+    /* source sets */
+    upper, "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+    lower, "abcdefghijklmnopqrstuvwxyz",
+    digits, "0123456789",
+
+    /* arrays of single characters */
+    txtArr, IF(n, MID(txt, SEQUENCE(n), 1), ""),
+    txtArrUpper, IF(n, MID(UPPER(txt), SEQUENCE(n), 1), ""),
+    upperArr, MID(upper, SEQUENCE(LEN(upper)), 1),
+    lowerArr, MID(lower, SEQUENCE(LEN(lower)), 1),
+    digitsArr, MID(digits, SEQUENCE(LEN(digits)), 1),
+
+    /* missing numbers (simple, case irrelevant) */
+    missingNumbers, IFERROR(TEXTJOIN("",,FILTER(digitsArr, ISNA(MATCH(digitsArr, txtArr, 0)))), ""),
+
+    /* case-insensitive letters missing (Mode=0, CaseSensitive=0) */
+    missingCI, IFERROR(TEXTJOIN("",,FILTER(upperArr, ISNA(MATCH(upperArr, txtArrUpper, 0)))), ""),
+
+    /* case-sensitive presence checks using EXACT() -> then build missing U/L */
+    presentUpper_CS, MAP(upperArr, LAMBDA(ch, SUM(--EXACT(ch, txtArr))>0)),
+    presentLower_CS, MAP(lowerArr, LAMBDA(ch, SUM(--EXACT(ch, txtArr))>0)),
+    missingUpper, IFERROR(TEXTJOIN("",,FILTER(upperArr, NOT(presentUpper_CS))), ""),
+    missingLower, IFERROR(TEXTJOIN("",,FILTER(lowerArr, NOT(presentLower_CS))), ""),
+
+    /* final result routing */
+    IF(Mode=1,
+       missingNumbers,
+       IF(CaseSensitive=1,
+          VSTACK(missingUpper, missingLower),
+          missingCI
+       )
+    )
+  )
 )
