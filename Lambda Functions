@@ -177,4 +177,11 @@ notInText = LAMBDA(TextOrRange, CaseSensitive, Mode,
        )
     )
   )
+);
+missingNumbers = LAMBDA(InputArray, MaxNum,
+  LET(
+    fullSet, SEQUENCE(MaxNum),                           /* full list from 1 to MaxNum */
+    missing, FILTER(fullSet, ISNA(MATCH(fullSet, InputArray, 0))),
+    missing
+  )
 )
