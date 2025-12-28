@@ -43,11 +43,14 @@ suitsOpp = {"♥";"♦";"♣";"♠"};
 cardOrd = {"A";"2";"3";"4";"5";"6";"7";"8";"9";"1";"J";"Q";"K"};
 
 /* Gets the most frequent items in a range */
-mostOf = LAMBDA(rng, [ord], [only], LET(
-  a, UNIQUE(TOCOL(rng, 3)),
-  b, MAP(a, LAMBDA(x, SUM(--(IFERROR(x = rng, 0))))),
-  sorted, SORT(HSTACK(a, b), 2, IF(ISOMITTED(ord), -1, ord)),
-  IF(only, INDEX(sorted, 1, 2), sorted)
+mostOf = LAMBDA(rng, [ord], [only], [exclude],
+LET(
+    a, UNIQUE(TOCOL(IF(rng = "", "", rng), 3)),
+    _include, BYROW(a <> TOROW(exclude), LAMBDA(x, PRODUCT(N(x)))),
+    filtered, IF(ISOMITTED(exclude), a, FILTER(a, _include)),
+    b, MAP(filtered, LAMBDA(x, SUM(--(IFERROR(x = rng, 0))))),
+    sorted, SORT(HSTACK(filtered, b), 2, IF(ISOMITTED(ord), -1, ord)),
+    IF(only, INDEX(sorted, 1, 2), sorted)
 ));
 
 /* Returns the character that comes after in a list */
@@ -188,6 +191,379 @@ missingNumbers = LAMBDA(InputArray, MaxNum,
 );
 
 countOdd = LAMBDA(arr, SUM(--ISODD(+arr)));
+
 countEven = LAMBDA(arr, SUM(--ISEVEN(+arr)));
+
 sumOdd = LAMBDA(arr, SUM(IF(ISODD(+arr), +arr, 0)));
-sumEven = LAMBDA(arr, SUM(IF(ISEVEN(+arr), +arr, 0)))
+
+sumEven = LAMBDA(arr, SUM(IF(ISEVEN(+arr), +arr, 0)));
+
+removeBlanks = LAMBDA(array,[remove_rows],[remove_columns], LET(
+   \\LambdaName, "REMOVEBLANKS",
+   \\CommandName, "Remove Blanks",
+   \\Description, "Remove all blank rows and columns.",
+   \\Parameters, {"array","array of values to evaluate for blank rows and columns"},
+   \\Source, "Excel Robot",
+   _NonBlanks, (--ISBLANK(array) + (array = "")) = 0,
+   _NonBlankColumns, FILTER(
+      SEQUENCE(1, COLUMNS(_NonBlanks)),
+      (BYCOL(--_NonBlanks, LAMBDA(x, SUM(x))) <> 0)
+         + IF(ISOMITTED(remove_columns), 0, 1 - remove_columns)
+   ),
+   _NonBlankRows, FILTER(
+      SEQUENCE(ROWS(_NonBlanks)),
+      (BYROW(--_NonBlanks, LAMBDA(x, SUM(x))) <> 0) + IF(ISOMITTED(remove_rows), 0, 1 - remove_rows)
+   ),
+   _Result, CHOOSEROWS(CHOOSECOLS(IF(array = "", "", array), _NonBlankColumns), _NonBlankRows),
+   _Result
+));
+
+removeCols = LAMBDA(array,column_indexes, LET(
+   \\LambdaName, "RemoveCols",
+   \\CommandName, "Remove Columns Of Array",
+   \\Description, "Removes specified columns of array using RemoveCols lambda.",
+   _Seq, SEQUENCE(COLUMNS(array)),
+   _Keep, ISERROR(MATCH(_Seq, TOROW(column_indexes), 0)),
+   _Included, FILTER(_Seq, _Keep, TRUE),
+   _Result, CHOOSECOLS(array, _Included),
+   _Result
+));
+
+removeRows = LAMBDA(array,row_indexes, LET(
+   \\LambdaName, "RemoveRows",
+   \\CommandName, "Remove Rows Of Array",
+   \\Description, "Removes specified rows of array using RemoveRows lambda.",
+   _Seq, SEQUENCE(ROWS(array)),
+   _Keep, ISERROR(MATCH(_Seq, TOROW(row_indexes), 0)),
+   _Included, FILTER(_Seq, _Keep, TRUE),
+   _Result, CHOOSEROWS(array, _Included),
+   _Result
+));
+
+reverseColumns = LAMBDA(array,LET(
+   \\LambdaName, "ReverseColumns",
+   \\CommandName, "Reverse Columns",
+   \\Description, "Returns an array in reverse column order.",
+SORTBY(array,SEQUENCE(1,COLUMNS(array)),-1))
+);
+
+reverseRows = LAMBDA(array,LET(
+   \\LambdaName, "ReverseRows",
+   \\CommandName, "Reverse Rows",
+   \\Description, "Returns array in reverse row order.",
+SORTBY(array,SEQUENCE(ROWS(array)),-1))
+);
+
+unpivot = LAMBDA(table,[columns_to_unpivot],[attribute_name],[value_name],[remove_blanks], LET(
+   _ColumnsToUnpivot, IF(
+      ISOMITTED(columns_to_unpivot),
+      DROP(TAKE(table, 1), , 1),
+      columns_to_unpivot
+   ),
+   _AttributeLabel, IF(ISOMITTED(attribute_name), "Attribute", attribute_name),
+   _ValueLabel, IF(ISOMITTED(value_name), "Value", value_name),
+   _FirstColumnToUnpivot, MATCH(
+      INDEX(_ColumnsToUnpivot, , 1),
+      INDEX(table, 1, ),
+      0
+   ),
+   _UnpivotColumnCount, COLUMNS(_ColumnsToUnpivot),
+   _ColumnNumbers, SEQUENCE(1, COLUMNS(table)),
+   _IncludeColumns, (_ColumnNumbers >= _FirstColumnToUnpivot)
+      * (_ColumnNumbers < _FirstColumnToUnpivot + _UnpivotColumnCount),
+   _UnpivotColumns, FILTER(_ColumnNumbers, _IncludeColumns),
+   _OtherColumns, FILTER(_ColumnNumbers, NOT(_IncludeColumns)),
+   _FullOuterJoin, CrossJoin(
+      CHOOSECOLS(table, _OtherColumns),
+      VSTACK(_AttributeLabel, TRANSPOSE(_ColumnsToUnpivot)),
+      TRUE
+   ),
+   _WithValues, HSTACK(
+      _FullOuterJoin,
+      VSTACK(_ValueLabel, TOCOL(DROP(CHOOSECOLS(table, _UnpivotColumns), 1)))
+   ),
+   _RemoveBlanks, IF(
+      OR(ISOMITTED(remove_blanks), remove_blanks),
+      FILTER(_WithValues, INDEX(_WithValues, , COLUMNS(_WithValues)) <> ""),
+      IF(_WithValues = "", "", _WithValues)
+   ),
+   _ColumnOrder, LET(
+      n, COLUMNS(_RemoveBlanks),
+      s, SEQUENCE(1, n),
+      IFS(
+         s < _FirstColumnToUnpivot,
+         s,
+         s < _FirstColumnToUnpivot + 2,
+         s + n - _FirstColumnToUnpivot - 1,
+         TRUE,
+         s - 2
+      )
+   ),
+   _Result, CHOOSECOLS(_RemoveBlanks, _ColumnOrder),
+   _Result
+));
+
+splitByCharacter = LAMBDA(text_vector, LET(
+   \\LambdaName, "SplitByCharacter",
+   fnSingle, LAMBDA(text, LET(
+      _Sequence, SEQUENCE(LEN(text)),
+      _Transpose, COLUMNS(text_vector) = 1,
+      _Split, MID(text, IF(_Transpose, TRANSPOSE(_Sequence), _Sequence), 1),
+      _Result, IF(LEN(text) = 0, "", _Split),
+      _Result
+   )),
+   _IsArray, TYPE(text_vector) = 64,
+   _Result, IF(_IsArray, IFNA(Tile(text_vector, LAMBDA(x, fnSingle(x))), ""), fnSingle(text_vector)),
+   _Result
+));
+
+splitNumbersFromText = LAMBDA(text_vector,[ignore_commas], LET(
+   \\LambdaName, "SplitNumbersFromText",
+   fnSplit, LAMBDA(text,[ignore_commas],[transpose_result], LET(
+      _chars, MID(text, SEQUENCE(LEN(text)), 1),
+      _isNumber, LET(
+         codes, CODE(_chars),
+         priorCodes, VSTACK("", DROP(codes, -1)),
+         nextCodes, VSTACK(DROP(codes, 1), ""),
+         fnIsDigit, LAMBDA(x, (x >= CODE("0")) * (x <= CODE("9")) = 1),
+         IsPeriod, codes = CODE("."),
+         IsComma, (codes = CODE(",")) * ((ISOMITTED(ignore_commas) + (ignore_commas = FALSE))) <> 0,
+         fnIsDigit(codes) + (IsPeriod + IsComma) * fnIsDigit(priorCodes) * fnIsDigit(nextCodes)
+      ),
+      _flip, VSTACK(DROP(_isNumber, 1) <> DROP(_isNumber, -1), FALSE),
+      _addDelimiter, _chars & IF(_flip, "‡", ""),
+      _split, TEXTSPLIT(CONCAT(_addDelimiter), "‡"),
+      _toNumbers, IFERROR(--_split, _split),
+      _result, IF(transpose_result, TRANSPOSE(_toNumbers), _toNumbers),
+      _result
+   )),
+   _Transpose, COLUMNS(text_vector) <> 1,
+   _IsArray, TYPE(text_vector) = 64,
+   _Result, IF(
+      _IsArray,
+      IFNA(Tile(text_vector, LAMBDA(x, fnSplit(x, ignore_commas, _Transpose))), ""),
+      fnSplit(text_vector, ignore_commas, FALSE)
+   ),
+   _Result
+));
+
+fillFromAbove = LAMBDA(array,[criteria], LET(
+   \\LambdaName, "FillFromAbove",
+   fnCriteria, IF(ISOMITTED(criteria), LAMBDA(x, x = ""), criteria),
+   _cols, SEQUENCE(1, COLUMNS(array)),
+   _rows, SEQUENCE(ROWS(array)),
+   fnIfBlank, LAMBDA(x, IF(x = "", "", x)),
+   fnFill, LAMBDA(vector,
+      SCAN(fnIfBlank(INDEX(vector, 1, 1)), vector, LAMBDA(s,x, IF(fnCriteria(x), s, x)))
+   ),
+   Tile(_cols, LAMBDA(n, fnFill(INDEX(array, _rows, n))))
+));
+
+fillFromBelow = LAMBDA(array,[criteria], LET(
+   \\LambdaName, "FillFromBelow",
+   fnCriteria, IF(ISOMITTED(criteria), LAMBDA(x, x = ""), criteria),
+   _cols, SEQUENCE(1, COLUMNS(array)),
+   _rows, SEQUENCE(ROWS(array)),
+   fnIfBlank, LAMBDA(x, IF(x = "", "", x)),
+   fnFill, LAMBDA(vector,
+      SCAN(fnIfBlank(INDEX(vector, 1, 1)), vector, LAMBDA(s,x, IF(fnCriteria(x), s, x)))
+   ),
+   fnReverse, LAMBDA(vector, SORTBY(vector, _rows, -1)),
+   Result, Tile(_cols, LAMBDA(n, fnReverse(fnFill(fnReverse(CHOOSECOLS(array, n)))))),
+   Result
+));
+
+fillFromLeft = LAMBDA(array,[criteria], LET(
+   \\LambdaName, "FillFromLeft",
+   fnCriteria, IF(ISOMITTED(criteria), LAMBDA(x, x = ""), criteria),
+   _cols, SEQUENCE(1, COLUMNS(array)),
+   _rows, SEQUENCE(ROWS(array)),
+   fnIfBlank, LAMBDA(x, IF(x = "", "", x)),
+   fnFill, LAMBDA(vector,
+      SCAN(fnIfBlank(INDEX(vector, 1, 1)), vector, LAMBDA(s,x, IF(fnCriteria(x), s, x)))
+   ),
+   Result, Tile(_rows, LAMBDA(n, fnFill(CHOOSEROWS(array, n)))),
+   Result
+));
+
+fillFromRight = LAMBDA(array,[criteria], LET(
+   \\LambdaName, "FillFromRight",
+   fnCriteria, IF(ISOMITTED(criteria), LAMBDA(x, x = ""), criteria),
+   _cols, SEQUENCE(1, COLUMNS(array)),
+   _rows, SEQUENCE(ROWS(array)),
+   fnIfBlank, LAMBDA(x, IF(x = "", "", x)),
+   fnFill, LAMBDA(vector,
+      SCAN(fnIfBlank(INDEX(vector, 1, 1)), vector, LAMBDA(s,x, IF(fnCriteria(x), s, x)))
+   ),
+   fnReverse, LAMBDA(vector, SORTBY(vector, _cols, -1)),
+   Result, Tile(_rows, LAMBDA(n, fnReverse(fnFill(fnReverse(CHOOSEROWS(array, n)))))),
+   Result
+));
+
+ifBlank = LAMBDA(array,value_if_blank,MAP(array,LAMBDA(val,IF(ISBLANK(val),value_if_blank,val))));
+
+removeBlanks = LAMBDA(array,[remove_rows],[remove_columns], LET(
+   \\LambdaName, "REMOVEBLANKS",
+   \\CommandName, "Remove Blanks",
+   \\Description, "Remove all blank rows and columns.",
+   \\Parameters, {"array","array of values to evaluate for blank rows and columns"},
+   \\Source, "Excel Robot",
+   _NonBlanks, (--ISBLANK(array) + (array = "")) = 0,
+   _NonBlankColumns, FILTER(
+      SEQUENCE(1, COLUMNS(_NonBlanks)),
+      (BYCOL(--_NonBlanks, LAMBDA(x, SUM(x))) <> 0)
+         + IF(ISOMITTED(remove_columns), 0, 1 - remove_columns)
+   ),
+   _NonBlankRows, FILTER(
+      SEQUENCE(ROWS(_NonBlanks)),
+      (BYROW(--_NonBlanks, LAMBDA(x, SUM(x))) <> 0) + IF(ISOMITTED(remove_rows), 0, 1 - remove_rows)
+   ),
+   _Result, CHOOSEROWS(CHOOSECOLS(IF(array = "", "", array), _NonBlankColumns), _NonBlankRows),
+   _Result
+));
+
+runningProduct = LAMBDA(array,LET(
+   \\LambdaName, "RunningProduct",
+   \\CommandName, "Running Product",
+   \\Description, "Returns vector of running product.",
+   res, SCAN(1,array,LAMBDA(s,a,s*a)),
+   res
+) );
+
+runningTotalsByColumn = LAMBDA(array,LET(    \\LambdaName, "RunningTotalsByColumn", Result, MAKEARRAY(ROWS(array),COLUMNS(array),LAMBDA(x,y,SUM(INDEX(array,SEQUENCE(x),y)))), Result) );
+
+runningTotalsByRow = LAMBDA(array,LET(    \\LambdaName, "RunningTotalsByRow",
+   Result, MAKEARRAY(ROWS(array),COLUMNS(array),LAMBDA(x,y,SUM(INDEX(array,x,SEQUENCE(1,y))))),
+   Result
+));
+
+sumByColumn = LAMBDA(array,BYCOL(array,LAMBDA(col,SUM(col))) );
+
+sumByRow = LAMBDA(array,BYROW(array,LAMBDA(col,SUM(col))) );
+
+isAll = LAMBDA(array,[criterion],
+   AND(IF(ISOMITTED(criterion), array, MAP(array, criterion)))
+); 
+
+isAllButOne = LAMBDA(array,[criterion],
+   SUM(--IF(ISOMITTED(criterion), array, MAP(array, criterion)))
+      = ROWS(array) * COLUMNS(array) - 1
+);
+
+isAny = LAMBDA(array,[criterion],
+   OR(IF(ISOMITTED(criterion), array, MAP(array, criterion)))
+);
+
+isExactlyOne = LAMBDA(array,[criterion],
+   SUM(--IF(ISOMITTED(criterion), array, MAP(array, criterion))) = 1
+);
+
+isExactlyTwo = LAMBDA(array,[criterion],
+   SUM(--IF(ISOMITTED(criterion), array, MAP(array, criterion))) = 2
+);
+
+isNone = LAMBDA(array,[criterion],
+   SUM(--IF(ISOMITTED(criterion), array, MAP(array, criterion))) = 0
+);
+
+allCombinations = LAMBDA(table1,table2,[has_headers], LET(
+   _HasHeaders, IF(ISOMITTED(has_headers),TRUE,has_headers),
+   _Data1, IF(_HasHeaders,DROP(table1,1),table1),
+   _Data2, IF(_HasHeaders,DROP(table2,1),table2),
+   _D1Rows, ROWS(_Data1),
+   _D1Cols, COLUMNS(_Data1),
+   _D2Rows, ROWS(_Data2),
+   _D2Cols, COLUMNS(_Data2),
+   _OuterJoinedData, MAKEARRAY(_D1Rows * _D2Rows, _D1Cols + _D2Cols,LAMBDA(i,j,
+      IF(j <= _D1Cols, INDEX(_Data1, ROUNDUP(i / _D2Rows, 0), j), INDEX(_Data2, MOD(i - 1, _D2Rows)+1, j - _D1Cols)))),
+   _WithHeader, IF(_HasHeaders,VSTACK(HSTACK(TAKE(table1, 1), TAKE(table2, 1)), _OuterJoinedData),_OuterJoinedData),
+   _WithHeader
+));
+
+guessDelimiter = LAMBDA(array, LET(
+   \\LambdaName, "GuessDelimiter",
+   _Combine, TEXTJOIN(CHAR(10), TRUE, array),
+   _Letters, MID(_Combine, SEQUENCE(LEN(_Combine)), 1),
+   _IsLetter, MAP(_Letters, LAMBDA(x, AND(UPPER(x) >= "A", UPPER(x) <= "Z"))),
+   _IsDigit, MAP(_Letters, LAMBDA(x, AND(x >= "0", x <= "9"))),
+   _IsWhiteSpace, MAP(
+      _Letters,
+      LAMBDA(x, OR(CODE(x) = 32, CODE(x) = 9, CODE(x) = 10, CODE(x) = 13))
+   ),
+   _IsNeither, (_IsLetter + _IsDigit + _IsWhiteSpace) = 0,
+   _Symbols, FILTER(_Letters, _IsNeither),
+   _Ranked, SORTBY(
+      UNIQUE(_Symbols),
+      BYROW(TRANSPOSE(_Symbols) = UNIQUE(_Symbols), LAMBDA(x, SUM(N(x)))),
+      -1
+   ),
+   _Result, TAKE(_Ranked, 1),
+   _Result
+));
+
+replaceZerosWithBlanks = LAMBDA(array,LET(
+   \\LambdaName, "ReplaceZerosWithBlanks",
+   \\CommandName, "Replace Zeros With Blanks",
+   \\Description, "Returns the passed array but with blanks where there were zeros.",
+IF(array=0,"",array))
+);
+
+showFormulas = LAMBDA(Reference, LET( 
+   c, Reference,
+   f, TOCOL(ADDRESS(ROW(c), COLUMN(c), 4) & ": " & FORMULATEXT(c), 3),
+   r, DROP(REDUCE({""}, f, LAMBDA(s,x, VSTACK(s, TEXTSPLIT(x, , "
+")))), 1),
+   r
+));
+
+nonDigitZero = LAMBDA(text_vector, LET(
+   \\LambdaName, "SplitByDigits",
+   fnSingle, LAMBDA(text, LET(
+      _Sequence, SEQUENCE(LEN(text)),
+      _Transpose, COLUMNS(text_vector) = 1,
+      _Split, MID(text, IF(_Transpose, TRANSPOSE(_Sequence), _Sequence), 1),
+      _Result, IF(LEN(text) = 0, "", IFERROR(VALUE(_), 0)),
+      _Result
+   )),
+   _IsArray, TYPE(text_vector) = 64,
+   _Result, IF(_IsArray, IFNA(Tile(text_vector, LAMBDA(x, fnSingle(x))), ""), fnSingle(text_vector)),
+   _Result
+));
+
+splitNumbersFromText = LAMBDA(text_vector,[ignore_commas], LET(
+   \\LambdaName, "SplitNumbersFromText",
+   fnSplit, LAMBDA(text,[ignore_commas],[transpose_result], LET(
+      _chars, MID(text, SEQUENCE(LEN(text)), 1),
+      _isNumber, LET(
+         codes, CODE(_chars),
+         priorCodes, VSTACK("", DROP(codes, -1)),
+         nextCodes, VSTACK(DROP(codes, 1), ""),
+         fnIsDigit, LAMBDA(x, (x >= CODE("0")) * (x <= CODE("9")) = 1),
+         IsPeriod, codes = CODE("."),
+         IsComma, (codes = CODE(",")) * ((ISOMITTED(ignore_commas) + (ignore_commas = FALSE))) <> 0,
+         fnIsDigit(codes) + (IsPeriod + IsComma) * fnIsDigit(priorCodes) * fnIsDigit(nextCodes)
+      ),
+      _flip, VSTACK(DROP(_isNumber, 1) <> DROP(_isNumber, -1), FALSE),
+      _addDelimiter, _chars & IF(_flip, "‡", ""),
+      _split, TEXTSPLIT(CONCAT(_addDelimiter), "‡"),
+      _toNumbers, IFERROR(--_split, _split),
+      _result, IF(transpose_result, TRANSPOSE(_toNumbers), _toNumbers),
+      _result
+   )),
+   _Transpose, COLUMNS(text_vector) <> 1,
+   _IsArray, TYPE(text_vector) = 64,
+   _Result, IF(
+      _IsArray,
+      IFNA(Tile(text_vector, LAMBDA(x, fnSplit(x, ignore_commas, _Transpose))), ""),
+      fnSplit(text_vector, ignore_commas, FALSE)
+   ),
+   _Result
+));
+
+tile = LAMBDA(params,function,LET(    \\LambdaName, "TILE",    \\CommandName, "Tile",    \\Description, "Tile the outputs of a single-parameter function given an array map of parameters.",    \\Parameters, {"params","array of parameters arranged how function results to be tiled";"function","single-parameter Lambda name or function"},    \\Source, "Written by @ExcelRobot but inspired by Owen Price's STACKER lambda.",
+   firstrow, function(INDEX(params,1,1)),
+   stacker, LAMBDA(stack,param,VSTACK(stack,function(param))),
+   firstcol, IF(ROWS(params)=1,firstrow,REDUCE(firstrow,DROP(TAKE(params,,1),1),stacker)),
+   Result, IF(COLUMNS(params)=1,firstcol,HSTACK(firstcol,Tile(DROP(params,,1),function))),
+   Result
+))
