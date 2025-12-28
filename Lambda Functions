@@ -178,10 +178,16 @@ notInText = LAMBDA(TextOrRange, CaseSensitive, Mode,
     )
   )
 );
+
 missingNumbers = LAMBDA(InputArray, MaxNum,
   LET(
     fullSet, SEQUENCE(MaxNum),                           /* full list from 1 to MaxNum */
     missing, FILTER(fullSet, ISNA(MATCH(fullSet, InputArray, 0))),
     missing
   )
-)
+);
+
+countOdd = LAMBDA(arr, SUM(--ISODD(+arr)));
+countEven = LAMBDA(arr, SUM(--ISEVEN(+arr)));
+sumOdd = LAMBDA(arr, SUM(IF(ISODD(+arr), +arr, 0)));
+sumEven = LAMBDA(arr, SUM(IF(ISEVEN(+arr), +arr, 0)))
