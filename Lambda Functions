@@ -7,22 +7,27 @@ pips = LAMBDA(d, UNICODE(d) - 9855);
 /* Shortened LEN() - LEN(SUBSTITUTE()) and divides by length */
 countOcc = LAMBDA(str, sub, (LEN(str) - LEN(SUBSTITUTE(str, sub, ""))) / LEN(sub));
 
-/* Returns a split list of characters horizontally */
+/* Splits each text value into character groups horizontally */
 splitByCharacter =
 LAMBDA(wrd, [len], [split],
   LET(
     _len, MAX(len, 1),
-    IF(
-      split,
-      MID(
-        wrd,
-        SEQUENCE(1, LEN(wrd)/_len, 1, _len),
-        _len
-      ),
-      MID(
-        wrd,
-        SEQUENCE(1, LEN(wrd)-_len+1),
-        _len
+    BYROW(
+      wrd,
+      LAMBDA(r,
+        IF(
+          split,
+          MID(
+            r,
+            SEQUENCE(1, LEN(r)/_len, 1, _len),
+            _len
+          ),
+          MID(
+            r,
+            SEQUENCE(1, LEN(r)-_len+1),
+            _len
+          )
+        )
       )
     )
   )
