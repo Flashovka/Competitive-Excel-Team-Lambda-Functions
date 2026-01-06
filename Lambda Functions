@@ -7,8 +7,26 @@ pips = LAMBDA(d, UNICODE(d) - 9855);
 /* Shortened LEN() - LEN(SUBSTITUTE()) and divides by length */
 countOcc = LAMBDA(str, sub, (LEN(str) - LEN(SUBSTITUTE(str, sub, ""))) / LEN(sub));
 
-/* Returns a split list of characters from a string */
-ltrs = LAMBDA(wrd, [len], [split], LET(_len, MAX(len, 1), IF(split, MID(wrd, SEQUENCE(LEN(wrd)/_len,,1,_len), _len), MID(wrd, SEQUENCE(LEN(wrd)-_len+1), _len))));
+/* Returns a split list of characters horizontally */
+splitByCharacter =
+LAMBDA(wrd, [len], [split],
+  LET(
+    _len, MAX(len, 1),
+    IF(
+      split,
+      MID(
+        wrd,
+        SEQUENCE(1, LEN(wrd)/_len, 1, _len),
+        _len
+      ),
+      MID(
+        wrd,
+        SEQUENCE(1, LEN(wrd)-_len+1),
+        _len
+      )
+    )
+  )
+);
 
 /* Returns a list of arrows */
 arrs = {"←","→","↑","↓","↖","↗","↙","↘"};
@@ -300,20 +318,6 @@ unpivot = LAMBDA(table,[columns_to_unpivot],[attribute_name],[value_name],[remov
       )
    ),
    _Result, CHOOSECOLS(_RemoveBlanks, _ColumnOrder),
-   _Result
-));
-
-splitByCharacter = LAMBDA(text_vector, LET(
-   \\LambdaName, "SplitByCharacter",
-   fnSingle, LAMBDA(text, LET(
-      _Sequence, SEQUENCE(LEN(text)),
-      _Transpose, COLUMNS(text_vector) = 1,
-      _Split, MID(text, IF(_Transpose, TRANSPOSE(_Sequence), _Sequence), 1),
-      _Result, IF(LEN(text) = 0, "", _Split),
-      _Result
-   )),
-   _IsArray, TYPE(text_vector) = 64,
-   _Result, IF(_IsArray, IFNA(Tile(text_vector, LAMBDA(x, fnSingle(x))), ""), fnSingle(text_vector)),
    _Result
 ));
 
