@@ -445,28 +445,28 @@ sumByColumn = LAMBDA(array,BYCOL(array,LAMBDA(col,SUM(col))) );
 
 sumByRow = LAMBDA(array,BYROW(array,LAMBDA(col,SUM(col))) );
 
-isAll = LAMBDA(array,[criterion],
+allTrue = LAMBDA(array,[criterion],
    AND(IF(ISOMITTED(criterion), array, MAP(array, criterion)))
 ); 
 
-isAllButOne = LAMBDA(array,[criterion],
+allButOneTrue = LAMBDA(array,[criterion],
    SUM(--IF(ISOMITTED(criterion), array, MAP(array, criterion)))
       = ROWS(array) * COLUMNS(array) - 1
 );
 
-isAny = LAMBDA(array,[criterion],
+anyTrue = LAMBDA(array,[criterion],
    OR(IF(ISOMITTED(criterion), array, MAP(array, criterion)))
 );
 
-isExactlyOne = LAMBDA(array,[criterion],
+exactlyOneTrue = LAMBDA(array,[criterion],
    SUM(--IF(ISOMITTED(criterion), array, MAP(array, criterion))) = 1
 );
 
-isExactlyTwo = LAMBDA(array,[criterion],
+exactlyTwoTrue = LAMBDA(array,[criterion],
    SUM(--IF(ISOMITTED(criterion), array, MAP(array, criterion))) = 2
 );
 
-isNone = LAMBDA(array,[criterion],
+noneTrue = LAMBDA(array,[criterion],
    SUM(--IF(ISOMITTED(criterion), array, MAP(array, criterion))) = 0
 );
 
