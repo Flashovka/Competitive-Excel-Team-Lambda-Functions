@@ -693,7 +693,14 @@ ISNONZERO = LAMBDA(x, IF(x = 0, FALSE(), TRUE()));
 
 isPalindrome = LAMBDA(text, LET(clean, LOWER(SUBSTITUTE(SUBSTITUTE(TRIM(text), " ", ""), "-", "")), clean = TEXTJOIN("", , MID(clean, SEQUENCE(LEN(clean), , LEN(clean), -1), 1))));
 
-letters = LAMBDA([Upp],    LET(       \\LambdaName, "Letters",       \\CommandName, "Creates a horizontal list of letters",       ABC, CHAR(SEQUENCE(1, 26) + 64),       IF((Upp = 1) + ISOMITTED(Upp), ABC, LOWER(ABC))    ) );
+letters = = LAMBDA([Upp],[N],
+   LET(
+      \\LambdaName, "Letters",
+      \\CommandName, "Creates a horizontal list of letters",
+      ABC, CHAR(SEQUENCE(1, IF(ISOMITTED(N), 26, N)) + 64),
+      IF((Upp = 1) + ISOMITTED(Upp), ABC, LOWER(ABC))
+   )
+);
 
 letterShift = LAMBDA(Input,Shft, LET( \\LambdaName, "LetterShift_byBendeLeon", \\CommandName, "Shifts letters", \\Source, "Ben de Leon", arr, UNICODE(splitByCharacter(Input)), NewChars, IFS( (arr >= 65) * (arr <= 90) = 1, MOD(arr - 65 + Shft, 26) + 65, (arr >= 97) * (arr <= 122) = 1, MOD(arr - 97 + Shft, 26) + 97, TRUE, arr ), Result, CONCAT(UNICHAR(NewChars)), Result ));
 
