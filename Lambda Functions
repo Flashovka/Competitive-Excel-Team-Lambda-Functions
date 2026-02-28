@@ -702,7 +702,7 @@ MODTEXT = LAMBDA(letter,shift, UNICHAR(MOD(UNICODE(UPPER(letter)) + UPPER(shift)
 
 NTHINSTANCE = LAMBDA(text,find,number, FIND(CHAR(160), SUBSTITUTE(text, find, CHAR(160), number)));
 
-numToDayOfWeek = LAMBDA(n, TEXT(MOD(n,7)+1,"dddd"));
+numToDayOfWeek = LAMBDA(n, TEXT(n, "dddd"));
 
 ONSAMEDIAGONAL = LAMBDA(cell1,cell2, ABS(ROW(cell1) - ROW(cell2)) = ABS(COL(cell2) - COL(cell1)));
 
