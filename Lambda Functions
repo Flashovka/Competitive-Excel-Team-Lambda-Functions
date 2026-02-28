@@ -1,3 +1,7 @@
+// --- Workbook module ---
+// A file of name definitions of the form:
+//    name = definition;
+
 /* Returns a list of die */
 dice = {"⚀";"⚁";"⚂";"⚃";"⚄";"⚅"};
 
@@ -41,12 +45,12 @@ arrowsUD = {0,0,1,-1,1,1,-1,-1};
 arrowsAll = VSTACK(arrows, arrowsLR, arrowsUD);
 
 /* Arrow combinations: customizable with row/col multipliers */
-arrsComb = LAMBDA([rwMult],[clMult], arrowsLR * IF(ISOMITTED(clMult), 1, clMult) + arrowsUD * IF(ISOMITTED(rwMult), 1000, rwMult))
+arrsComb = LAMBDA([rwMult],[clMult], arrowsLR * IF(ISOMITTED(clMult), 1, clMult) + arrowsUD * IF(ISOMITTED(rwMult), 1000, rwMult));
 
 /* Knight movement vectors */
 knightLR = {1;1;-1;-1;2;2;-2;-2};
 knightUD = {2;-2;2;-2;1;-1;1;-1};
-knightComb = LAMBDA(Lrmult, UDmult, _knightLR * Lrmult + _knightUD * UDmult);
+knightComb = LAMBDA(Lrmult, UDmult, knightLR * Lrmult + knightUD * UDmult);
 
 /* Combine directions */
 dirsComb = LAMBDA(Lrshift, Lrmult, UDshift, UDmult, Lrshift * Lrmult + UDshift * UDmult);
@@ -209,26 +213,6 @@ sumOdd = LAMBDA(arr, SUM(IF(ISODD(+arr), +arr, 0)));
 
 sumEven = LAMBDA(arr, SUM(IF(ISEVEN(+arr), +arr, 0)));
 
-removeBlanks = LAMBDA(array,[remove_rows],[remove_columns], LET(
-   \\LambdaName, "REMOVEBLANKS",
-   \\CommandName, "Remove Blanks",
-   \\Description, "Remove all blank rows and columns.",
-   \\Parameters, {"array","array of values to evaluate for blank rows and columns"},
-   \\Source, "Excel Robot",
-   _NonBlanks, (--ISBLANK(array) + (array = "")) = 0,
-   _NonBlankColumns, FILTER(
-      SEQUENCE(1, COLUMNS(_NonBlanks)),
-      (BYCOL(--_NonBlanks, LAMBDA(x, SUM(x))) <> 0)
-         + IF(ISOMITTED(remove_columns), 0, 1 - remove_columns)
-   ),
-   _NonBlankRows, FILTER(
-      SEQUENCE(ROWS(_NonBlanks)),
-      (BYROW(--_NonBlanks, LAMBDA(x, SUM(x))) <> 0) + IF(ISOMITTED(remove_rows), 0, 1 - remove_rows)
-   ),
-   _Result, CHOOSEROWS(CHOOSECOLS(IF(array = "", "", array), _NonBlankColumns), _NonBlankRows),
-   _Result
-));
-
 removeCols = LAMBDA(array,column_indexes, LET(
    \\LambdaName, "RemoveCols",
    \\CommandName, "Remove Columns Of Array",
@@ -314,36 +298,6 @@ unpivot = LAMBDA(table,[columns_to_unpivot],[attribute_name],[value_name],[remov
    _Result
 ));
 
-splitNumbersFromText = LAMBDA(text_vector,[ignore_commas], LET(
-   \\LambdaName, "SplitNumbersFromText",
-   fnSplit, LAMBDA(text,[ignore_commas],[transpose_result], LET(
-      _chars, MID(text, SEQUENCE(LEN(text)), 1),
-      _isNumber, LET(
-         codes, CODE(_chars),
-         priorCodes, VSTACK("", DROP(codes, -1)),
-         nextCodes, VSTACK(DROP(codes, 1), ""),
-         fnIsDigit, LAMBDA(x, (x >= CODE("0")) * (x <= CODE("9")) = 1),
-         IsPeriod, codes = CODE("."),
-         IsComma, (codes = CODE(",")) * ((ISOMITTED(ignore_commas) + (ignore_commas = FALSE))) <> 0,
-         fnIsDigit(codes) + (IsPeriod + IsComma) * fnIsDigit(priorCodes) * fnIsDigit(nextCodes)
-      ),
-      _flip, VSTACK(DROP(_isNumber, 1) <> DROP(_isNumber, -1), FALSE),
-      _addDelimiter, _chars & IF(_flip, "‡", ""),
-      _split, TEXTSPLIT(CONCAT(_addDelimiter), "‡"),
-      _toNumbers, IFERROR(--_split, _split),
-      _result, IF(transpose_result, TRANSPOSE(_toNumbers), _toNumbers),
-      _result
-   )),
-   _Transpose, COLUMNS(text_vector) <> 1,
-   _IsArray, TYPE(text_vector) = 64,
-   _Result, IF(
-      _IsArray,
-      IFNA(Tile(text_vector, LAMBDA(x, fnSplit(x, ignore_commas, _Transpose))), ""),
-      fnSplit(text_vector, ignore_commas, FALSE)
-   ),
-   _Result
-));
-
 fillFromAbove = LAMBDA(array,[criteria], LET(
    \\LambdaName, "FillFromAbove",
    fnCriteria, IF(ISOMITTED(criteria), LAMBDA(x, x = ""), criteria),
@@ -399,23 +353,29 @@ fillFromRight = LAMBDA(array,[criteria], LET(
 
 ifBlank = LAMBDA(array,value_if_blank,MAP(array,LAMBDA(val,IF(ISBLANK(val),value_if_blank,val))));
 
-removeBlanks = LAMBDA(array,[remove_rows],[remove_columns], LET(
-   \\LambdaName, "REMOVEBLANKS",
-   \\CommandName, "Remove Blanks",
-   \\Description, "Remove all blank rows and columns.",
-   \\Parameters, {"array","array of values to evaluate for blank rows and columns"},
-   \\Source, "Excel Robot",
+removeBlanks =
+LAMBDA(array,[remove_rows],[remove_columns],
+LET(
    _NonBlanks, (--ISBLANK(array) + (array = "")) = 0,
+
    _NonBlankColumns, FILTER(
-      SEQUENCE(1, COLUMNS(_NonBlanks)),
+      SEQUENCE(1, COLUMNS(array)),
       (BYCOL(--_NonBlanks, LAMBDA(x, SUM(x))) <> 0)
          + IF(ISOMITTED(remove_columns), 0, 1 - remove_columns)
    ),
+
    _NonBlankRows, FILTER(
-      SEQUENCE(ROWS(_NonBlanks)),
-      (BYROW(--_NonBlanks, LAMBDA(x, SUM(x))) <> 0) + IF(ISOMITTED(remove_rows), 0, 1 - remove_rows)
+      SEQUENCE(ROWS(array)),
+      (BYROW(--_NonBlanks, LAMBDA(x, SUM(x))) <> 0)
+         + IF(ISOMITTED(remove_rows), 0, 1 - remove_rows)
    ),
-   _Result, CHOOSEROWS(CHOOSECOLS(IF(array = "", "", array), _NonBlankColumns), _NonBlankRows),
+
+   _Result,
+   CHOOSEROWS(
+      CHOOSECOLS(IF(array = "", "", array), _NonBlankColumns),
+      _NonBlankRows
+   ),
+
    _Result
 ));
 
@@ -500,7 +460,7 @@ nonDigitZero = LAMBDA(text_vector, LET(
       _Sequence, SEQUENCE(LEN(text)),
       _Transpose, COLUMNS(text_vector) = 1,
       _Split, MID(text, IF(_Transpose, TRANSPOSE(_Sequence), _Sequence), 1),
-      _Result, IF(LEN(text) = 0, "", IFERROR(VALUE(_), 0)),
+      _Result, IF(LEN(text) = 0, "", IFERROR(VALUE(_Split), 0)),
       _Result
    )),
    _IsArray, TYPE(text_vector) = 64,
@@ -570,11 +530,41 @@ BiRow_byPeterBartholomew = LAMBDA(array,function,LET(\\LambdaName, "BiRow_byPete
 
 BLOCK = LAMBDA(rng,sheetname,x,y, OFFSET(INDIRECT(YOUAREHERE(rng, sheetname)), -y, -x, 2 * y + 1, 2 * x + 1));
 
-cardOrd = {"A";"2";"3";"4";"5";"6";"7";"8";"9";"1";"J";"Q";"K"};
-
 caseInputs = LAMBDA(     LET(         questions, FILTER(INDIRECT("Case!$B:$EE"), ISNUMBER(INDIRECT("Case!$B:$B"))),         result, IF(questions=0, NA(), questions),         clean, HSTACK(TAKE(result,,3), TAKE(result,,-COLUMNS(result)+5)),         IFERROR(clean, "")     ) );
 
-CellsAround_byBendeLeon = LAMBDA(Ref,ColOff,RowOff,[ColMin],[ColMax],[RowMin],[RowMax],[Flatten],LET(\\LambdaName, "CellsAround", \\Description, "Return cells around target cell", \\Source, "Ben deLeon", arr, LET(a, DROP(ColumnList(COLUMN(INDIRECT(Ref)) + ColOff), , IF(COLUMN(INDIRECT(Ref)) <= ColOff, 0, COLUMN(INDIRECT(Ref)) - ColOff - 1)), b, ColumnNumber(a), FILTER(a, (b >= IF(ISOMITTED(ColMin), 1, MAX(1, IF(ISNUMBER(ColMin), ColMin, ColumnNumber(ColMin))))) * (b <= IF(ISOMITTED(ColMax), 1000, MIN(1000, IF(ISNUMBER(ColMax), ColMax, ColumnNumber(ColMax))))))) & LET(a, SEQUENCE(RowOff * 2 + 1, , ROW(INDIRECT(Ref)) - RowOff), FILTER(a, (a >= IF(ISOMITTED(RowMin), 1, MAX(1, RowMin))) * (a <= IF(ISOMITTED(RowMax), 10000, MIN(10000, RowMax))))), IF(Flatten = TRUE, TOROW(arr), arr)));
+CellsAround = LAMBDA(
+    Ref, ColOff, RowOff, 
+    [ColMin], [ColMax], [RowMin], [RowMax], [Flatten], 
+    LET(
+        \\LambdaName, "CellsAround",
+        \\Description, "Return cells around target cell",
+        
+        // Base row and column of the reference
+        r, ROW(INDIRECT(Ref)),
+        c, COLUMN(INDIRECT(Ref)),
+        
+        // Column range
+        colStart, IF(ISOMITTED(ColMin), 1, MAX(1, ColMin)),
+        colEnd, IF(ISOMITTED(ColMax), 16384, MIN(16384, ColMax)),
+        colSeq, SEQUENCE(1, 2*ColOff + 1, c - ColOff),
+        colSeqFiltered, FILTER(colSeq, (colSeq >= colStart) * (colSeq <= colEnd)),
+        
+        // Row range
+        rowStart, IF(ISOMITTED(RowMin), 1, MAX(1, RowMin)),
+        rowEnd, IF(ISOMITTED(RowMax), 1048576, MIN(1048576, RowMax)),
+        rowSeq, SEQUENCE(2*RowOff + 1, 1, r - RowOff),
+        rowSeqFiltered, FILTER(rowSeq, (rowSeq >= rowStart) * (rowSeq <= rowEnd)),
+        
+        // Combine into 2D grid of cells (rowSeq x colSeq)
+        grid, HSTACK(
+            TRANSPOSE(rowSeqFiltered),  // makes rows vertical
+            colSeqFiltered              // columns horizontal
+        ),
+        
+        // Flatten if requested
+        IF(ISOMITTED(Flatten), grid, IF(Flatten=TRUE, TOROW(grid), grid))
+    )
+);
 
 COL = LAMBDA(x, IF(ISOMITTED(x), COLUMN(), COLUMN(x)));
 
@@ -584,27 +574,13 @@ columnFromAddress = LAMBDA(add, COLUMN(INDIRECT(add)));
 
 CountChar_byLiannaGerrish = LAMBDA(text,c,LET(\\LambdaName, "CountChar_byLiannaGerrish", \\CommandName, "Count Characters in a String", \\Description, "Returns the number of times a character appears in the selected text string", \\Source, "Lianna Gerrish", Trimmedtext, TRIM(text), TrimmedtextLength, LEN(Trimmedtext), WhiteSpaceSubstitution, SUBSTITUTE(Trimmedtext, c, ""), TextLengthNoSpaces, LEN(WhiteSpaceSubstitution), TrimmedtextLength - TextLengthNoSpaces + 0));
 
-countEven = LAMBDA(arr, SUM(--ISEVEN(+arr)));
-
-countOdd = LAMBDA(arr, SUM(--ISODD(+arr)));
-
 CR2A = LAMBDA(cnum,rnum, ADDRESS(rnum, cnum, 4));
-
-crossJoin = LAMBDA(table1,table2,[has_headers], LET(_HasHeaders, IF(ISOMITTED(has_headers), TRUE, has_headers), _Data1, IF(_HasHeaders, DROP(table1, 1), table1), _Data2, IF(_HasHeaders, DROP(table2, 1), table2), _D1Rows, ROWS(_Data1), _D1Cols, COLUMNS(_Data1), _D2Rows, ROWS(_Data2), _D2Cols, COLUMNS(_Data2), _OuterJoinedData, MAKEARRAY(_D1Rows * _D2Rows, _D1Cols + _D2Cols, LAMBDA(i,j, IF(j <= _D1Cols, INDEX(_Data1, ROUNDUP(i / _D2Rows, 0), j), INDEX(_Data2, MOD(i - 1, _D2Rows) + 1, j - _D1Cols)))), _WithHeader, IF(_HasHeaders, VSTACK(HSTACK(TAKE(table1, 1), TAKE(table2, 1)), _OuterJoinedData), _OuterJoinedData), _WithHeader));
 
 DATEHEADERS = LAMBDA(start_date,periods,type, LET(month_num, IFS(type = "Y", 12, type = "Q", 3, type = "M", 1), HSTACK(VSTACK("Start Date", "End Date", "Period #", "Year", "Month", "Jan Flag"), VSTACK(EDATE(start_date, SEQUENCE(, periods, 0, month_num)), EOMONTH(EDATE(start_date, SEQUENCE(, periods, 0, month_num)), month_num - 1), SEQUENCE(, periods), YEAR(EDATE(start_date, SEQUENCE(, periods, 0, month_num))), MONTH(EDATE(start_date, SEQUENCE(, periods, 0, month_num))), --MONTH(EDATE(start_date, SEQUENCE(, periods, 0, month_num))) = 1))));
 
 DAYSINPERIOD = LAMBDA(start_date,end_date,period_start_date,days_in_period, MAX(0, MAX(0, MIN(days_in_period, MIN(end_date - period_start_date))) - MAX(0, (start_date - period_start_date))));
 
-Decimal_Separator = 'Default Settings'!$C$9;
-
 DiffByRow_byJaqKennedy = LAMBDA(Input,LET(\\LambdaName, "DiffByRow", \\CommandName, "Difference of array columns by row", \\Description, "Returns first column - last column in array", \\Source, "Jaq Kennedy", TAKE(Input, , 1) - TAKE(Input, , -1)));
-
-DIJKSTRA = LAMBDA(current_cell,map_cell,blocked_cells,diag, IF(diag = 1, IF(MAX(IF(COUNTIF(map_cell, blocked_cells), 1, 0)) = 0, MIN(INDIRECT(Loc.SHIFT_OOB(CELL("address", current_cell), -1, -1) & ":" & Loc.SHIFT_OOB(CELL("address", current_cell), 1, 1))) + map_cell, 999), IF(MAX(IF(COUNTIF(map_cell, blocked_cells), 1, 0)) = 0, MIN(INDIRECT(Loc.SHIFT_OOB(CELL("address", current_cell), 1, 0)), INDIRECT(Loc.SHIFT_OOB(CELL("address", current_cell), -1, 0)), INDIRECT(Loc.SHIFT_OOB(CELL("address", current_cell), 0, -1)), INDIRECT(Loc.SHIFT_OOB(CELL("address", current_cell), 0, 1))) + map_cell, 999)));
-
-dirsComb = LAMBDA(Lrshift,Lrmult,UDshift,UDmult, Lrshift * Lrmult + UDshift * UDmult);
-
-distFrom = LAMBDA(mp,trg,func, LET(vals, TOCOL(mp), rws, TOCOL(SEQUENCE(ROWS(mp)) + 0 * SEQUENCE(, COLUMNS(mp))), cls, TOCOL(SEQUENCE(ROWS(mp)) * 0 + SEQUENCE(, COLUMNS(mp))), Mrws, TOROW(FILTER(rws, vals = trg)), Mcls, TOROW(FILTER(cls, vals = trg)), rdist, ABS(rws - Mrws), cdist, ABS(cls - Mcls), dist, BYROW(MAP(rdist, cdist, func), MIN), WRAPROWS(dist, COLUMNS(mp))))
 
 DistFromCellArr = LAMBDA(startcell,sum_distance_traveled, LET(
    \\LambdaName, "DistFromCellArr",
@@ -642,21 +618,7 @@ DROPCOL_byLiannaGerrish = LAMBDA(array,column,LET(\\LambdaName, "DROPCOL", \\Com
 
 easyIndirect = LAMBDA(cell,[sheetname],IF(ISOMITTED(sheetname), INDIRECT(cell), INDIRECT(sheetname & "!" & cell)));
 
-exactlyOneTrue = LAMBDA(array,[criterion], SUM(--IF(ISOMITTED(criterion), array, MAP(array, criterion))) = 1);
-
-exactlyTwoTrue = LAMBDA(array,[criterion], SUM(--IF(ISOMITTED(criterion), array, MAP(array, criterion))) = 2);
-
 extractLetters = LAMBDA(text,REDUCE("", MID(text, SEQUENCE(LEN(text), 1), 1), LAMBDA(x,y, IF(ISNUMBER(VALUE(y)), x, x & y))));
-
-extractNumbers = LAMBDA(txt, TEXTJOIN("", , IFERROR(MID(txt, SEQUENCE(LEN(txt)), 1) * 1, "")));
-
-fillFromAbove = LAMBDA(array,[criteria], LET(\\LambdaName, "FillFromAbove", fnCriteria, IF(ISOMITTED(criteria), LAMBDA(x, x = ""), criteria), _cols, SEQUENCE(1, COLUMNS(array)), _rows, SEQUENCE(ROWS(array)), fnIfBlank, LAMBDA(x, IF(x = "", "", x)), fnFill, LAMBDA(vector, SCAN(fnIfBlank(INDEX(vector, 1, 1)), vector, LAMBDA(s,x, IF(fnCriteria(x), s, x)))), tile(_cols, LAMBDA(n, fnFill(INDEX(array, _rows, n))))));
-
-fillFromBelow = LAMBDA(array,[criteria], LET(\\LambdaName, "FillFromBelow", fnCriteria, IF(ISOMITTED(criteria), LAMBDA(x, x = ""), criteria), _cols, SEQUENCE(1, COLUMNS(array)), _rows, SEQUENCE(ROWS(array)), fnIfBlank, LAMBDA(x, IF(x = "", "", x)), fnFill, LAMBDA(vector, SCAN(fnIfBlank(INDEX(vector, 1, 1)), vector, LAMBDA(s,x, IF(fnCriteria(x), s, x)))), fnReverse, LAMBDA(vector, SORTBY(vector, _rows, -1)), Result, tile(_cols, LAMBDA(n, fnReverse(fnFill(fnReverse(CHOOSECOLS(array, n)))))), Result));
-
-fillFromLeft = LAMBDA(array,[criteria], LET(\\LambdaName, "FillFromLeft", fnCriteria, IF(ISOMITTED(criteria), LAMBDA(x, x = ""), criteria), _cols, SEQUENCE(1, COLUMNS(array)), _rows, SEQUENCE(ROWS(array)), fnIfBlank, LAMBDA(x, IF(x = "", "", x)), fnFill, LAMBDA(vector, SCAN(fnIfBlank(INDEX(vector, 1, 1)), vector, LAMBDA(s,x, IF(fnCriteria(x), s, x)))), Result, tile(_rows, LAMBDA(n, fnFill(CHOOSEROWS(array, n)))), Result));
-
-fillFromRight = LAMBDA(array,[criteria], LET(\\LambdaName, "FillFromRight", fnCriteria, IF(ISOMITTED(criteria), LAMBDA(x, x = ""), criteria), _cols, SEQUENCE(1, COLUMNS(array)), _rows, SEQUENCE(ROWS(array)), fnIfBlank, LAMBDA(x, IF(x = "", "", x)), fnFill, LAMBDA(vector, SCAN(fnIfBlank(INDEX(vector, 1, 1)), vector, LAMBDA(s,x, IF(fnCriteria(x), s, x)))), fnReverse, LAMBDA(vector, SORTBY(vector, _cols, -1)), Result, tile(_rows, LAMBDA(n, fnReverse(fnFill(fnReverse(CHOOSEROWS(array, n)))))), Result));
 
 filterRowsByList = LAMBDA(data,column_indexes,filter_values,    LET(       mask,       BYROW(          CHOOSECOLS(data, column_indexes),          LAMBDA(r, AND(MAP(r, LAMBDA(x, OR(filter_values = x)))))       ),       FILTER(data, mask)    ) );
 
@@ -666,34 +628,48 @@ GETDIST_weighted = LAMBDA(cell1,cell2,diag_flag,h_mod,v_mod,d_mod, LET(a, Loc.CO
 
 gridToCol = LAMBDA(grid,[ShowAll_0], LET(    \\LambdaName, "GRIDTOCOL",    items_grid, TOCOL(grid),    addr_col, TOCOL(addresses(grid)),     rows, ROW(INDIRECT(addr_col)) * 1,    cols, COLUMN(INDIRECT(addr_col)) * 1,    rcnum, TOCOL(1000000 * rows + 1000 + cols),    headers, HSTACK("Items", "Row #", "Column #", "Address", "RCRef"),    data_grid, HSTACK(items_grid, rows, cols, addr_col, rcnum),    IF(       OR(ISOMITTED(ShowAll_0), ShowAll_0 <> 0),       VSTACK(headers, FILTER(data_grid, CHOOSECOLS(data_grid, 1) <> 0)),       VSTACK(headers, data_grid)    ) ));
 
-guessDelimiter = LAMBDA(array, LET(\\LambdaName, "GuessDelimiter", _Combine, TEXTJOIN(CHAR(10), TRUE, array), _Letters, MID(_Combine, SEQUENCE(LEN(_Combine)), 1), _IsLetter, MAP(_Letters, LAMBDA(x, AND(UPPER(x) >= "A", UPPER(x) <= "Z"))), _IsDigit, MAP(_Letters, LAMBDA(x, AND(x >= "0", x <= "9"))), _IsWhiteSpace, MAP(_Letters, LAMBDA(x, OR(CODE(x) = 32, CODE(x) = 9, CODE(x) = 10, CODE(x) = 13))), _IsNeither, (_IsLetter + _IsDigit + _IsWhiteSpace) = 0, _Symbols, FILTER(_Letters, _IsNeither), _Ranked, SORTBY(UNIQUE(_Symbols), BYROW(TRANSPOSE(_Symbols) = UNIQUE(_Symbols), LAMBDA(x, SUM(N(x)))), -1), _Result, TAKE(_Ranked, 1), _Result));
-
-I2M = =LAMBDA(arr,row,col, INDEX(arr, MATCH(row, CHOOSECOLS(arr, 1), 0), MATCH(col, CHOOSEROWS(arr, 1), 0))); 
-
-IFBLANK = LAMBDA(value,value_if_blank, IF(ISBLANK(value), value_if_blank, value));
+I2M = LAMBDA(arr,row,col, INDEX(arr, MATCH(row, CHOOSECOLS(arr, 1), 0), MATCH(col, CHOOSEROWS(arr, 1), 0))); 
 
 IFOMITTED = LAMBDA(value,value_if_omitted, IF(ISOMITTED(value), value_if_omitted, value));
 
-IndMatch = LAMBDA(Input1,Input2, LET(
-   \\LambdaName, "IndMatch",
-   \\CommandName, "Indirect Match Lookup",
-   _Step1, SUBSTITUTE(Input1, " ", "_"),
-   _Step2, SUBSTITUTE(Input2, " ", "_"),
-   _Result, INDIRECT(_Step1)  INDIRECT(_Step2),
-   _Result
-));
+IndMatch = LAMBDA(Input1, Input2,
+    LET(
+        _Step1, SUBSTITUTE(Input1, " ", "_"),
+        _Step2, SUBSTITUTE(Input2, " ", "_"),
+        _Result, MATCH(INDIRECT(_Step1), INDIRECT(_Step2), 0),
+        _Result
+    )
+);
 
-INTSECT = LAMBDA(string1,string2,[In],[Out], INDIRECT(IF(ISOMITTED(In) + ISOMITTED(Out), SUBSTITUTE(string1, " ", "_"), MEGAREPLACE(string1, In, Out))) INDIRECT(IF(ISOMITTED(In) + ISOMITTED(Out), SUBSTITUTE(string2, " ", "_"), MEGAREPLACE(string2, In, Out)))) LISTOFFSET = LAMBDA(arr,curr,offset,booLoop, LET(tarr, IF(ROWS(arr) > 1, arr, TRANSPOSE(arr)), cnt, ROWS(tarr), off, IF(ABS(offset) > cnt, SIGN(offset) * (MOD(ABS(offset) + 1, cnt) - 1), offset), idx, IF(OR(curr + off < 1, curr + off > cnt), IF(booLoop, IF(curr + off < 1, cnt + curr + off, curr + off - cnt), 0), curr + off), return, IF(idx = 0, 0, INDEX(tarr, idx)), return));
+INTSECT = LAMBDA(string1, string2, [In], [Out],
+    LET(
+        // Function to do multi-replace (like MEGAREPLACE)
+        MultiReplace, LAMBDA(str, fromArr, toArr,
+            IF(
+                OR(ISOMITTED(fromArr), ISOMITTED(toArr)),
+                str,
+                REDUCE(str, SEQUENCE(ROWS(fromArr)),
+                    LAMBDA(s, i, SUBSTITUTE(s, INDEX(fromArr, i), INDEX(toArr, i)))
+                )
+            )
+        ),
+
+        // Prepare first and second ranges
+        _Range1, INDIRECT(MultiReplace(string1, In, Out)),
+        _Range2, INDIRECT(MultiReplace(string2, In, Out)),
+
+        // Combine vertically
+        VSTACK(_Range1, _Range2)
+    )
+);
 
 isInList = LAMBDA(array,list,LET(\\LambdaName, "IsInList", MAP(array, LAMBDA(x, OR(list = x)))));
 
-ISINRANGE = LAMBDA(cell,bear,x,y,[lookup_output],[default],[id], LET(default, IF(ISOMITTED(default), 0, default), lookup_output, IF(ISOMITTED(lookup_output), 1, lookup_output), a, MAX(IF(COUNTIF(INDIRECT(Loc.SHIFT_OOB(CELL("address", cell), -x, -y) & ":" & Loc.SHIFT_OOB(CELL("address", cell), x, y)), bear), IF(ISOMITTED(id), 1, id), default)), IF(ISOMITTED(id), IF(a <> 0, a, default), XLOOKUP(a, id, lookup_output, default))));
+ISINRANGE = LAMBDA(cell,bear,x,y,[lookup_output],[default],[id], LET( default, IF(ISOMITTED(default), 0, default), lookup_output, IF(ISOMITTED(lookup_output), 1, lookup_output), area, OFFSET(cell, -x, -y, 2*x+1, 2*y+1), a, MAX( IF( COUNTIF(area, bear), IF(ISOMITTED(id), 1, id), default ) ), IF( ISOMITTED(id), IF(a <> 0, a, default), XLOOKUP(a, id, lookup_output, default) ) ) );
 
 ISNONZERO = LAMBDA(x, IF(x = 0, FALSE(), TRUE()));
 
-isPalindrome = LAMBDA(text, LET(clean, LOWER(SUBSTITUTE(SUBSTITUTE(TRIM(text), " ", ""), "-", "")), clean = TEXTJOIN("", , MID(clean, SEQUENCE(LEN(clean), , LEN(clean), -1), 1))));
-
-letters = = LAMBDA([Upp],[N],
+letters = LAMBDA([Upp],[N],
    LET(
       \\LambdaName, "Letters",
       \\CommandName, "Creates a horizontal list of letters",
@@ -706,7 +682,7 @@ letterShift = LAMBDA(Input,Shft, LET( \\LambdaName, "LetterShift_byBendeLeon", \
 
 LISTOFFSET = LAMBDA(array,curr,offset,booLoop, LET(tarr, IF(ROWS(array) > 1, array, TRANSPOSE(array)), cnt, ROWS(tarr), off, IF(ABS(offset) > cnt, SIGN(offset) * (MOD(ABS(offset) + 1, cnt) - 1), offset), idx, IF(OR(curr + off < 1, curr + off > cnt), IF(booLoop, IF(curr + off < 1, cnt + curr + off, curr + off - cnt), 0), curr + off), return, IF(idx = 0, 0, INDEX(tarr, idx)), return));
 
-LkpRCByRow = LAMBDA(ToFind,Range,LET(\\LambdaName, "LkpRCByRow", \\CommandName, "Lookup Value by Row", \\Description, "Returns RC location of a list of values in a range", \\Source, "Jaq Kennedy", BiRow_byPeterBartholomew(ToFind, LAMBDA(a, IFERROR(CHOOSEROWS(matchRowCol(a, Range), 1), {"",""})))));
+LkpRCByRow = LAMBDA(ToFind, Range, BiRow_byPeterBartholomew( ToFind, LAMBDA(a, IFERROR( CHOOSECOLS(MatchRowCol(a, Range), 1), "" ) ) ) );
 
 LkpSum = LAMBDA(values,lkpin,lkpout, LET(
    \\LambdaName, "LkpSum",
@@ -720,29 +696,15 @@ MEGAREPLACE = LAMBDA(text,search,replace, IF(search = "", text, MEGAREPLACE(SUBS
 
 minAndMax = LAMBDA(Range,LET(\\LambdaName, "MinMax", \\CommandName, "Get Min and Max of Range", _GetMin, MIN(Range), _GetMax, MAX(Range), _MinMax, VSTACK(_GetMin, _GetMax), _MinMax));
 
-missingNumbers = LAMBDA(InputArray,MaxNum, LET(fullSet, SEQUENCE(MaxNum), missing, FILTER(fullSet, ISNA(MATCH(fullSet, InputArray, 0))), missing));
-
 MODESUPER = LAMBDA(rng, LET(u, TOCOL(UNIQUE(rng), 3), TAKE(SORT(HSTACK(u, COUNTIF(rng, u)), 2, -1), 1)));
 
 MODTEXT = LAMBDA(letter,shift, UNICHAR(MOD(UNICODE(UPPER(letter)) + UPPER(shift) - 65, 26) + 65));
-
-neighborOp = LAMBDA(rng,dist,fnc, MAKEARRAY(ROWS(rng), COLUMNS(rng), LAMBDA(r,c, fnc(LET(firstRw, MAX(r - dist, 1), firstCl, MAX(c - dist, 1), lastRw, MIN(r + dist, ROWS(rng)), lastCl, MIN(c + dist, COLUMNS(rng)), CHOOSECOLS(CHOOSEROWS(rng, SEQUENCE(lastRw - firstRw + 1, , firstRw)), SEQUENCE(lastCl - firstCl + 1, , firstCl)))))));
-
-nonDigitZero = LAMBDA(text_vector,    LET(       \\LambdaName, "NonDigitZero",       fnSingle,          LAMBDA(text,             LET(                _Sequence, SEQUENCE(LEN(text)),                _Transpose, COLUMNS(text_vector) = 1,                _Split,                   MID(                      text,                      IF(_Transpose, TRANSPOSE(_Sequence), _Sequence),                      1                   ),                _Result,                   IF(                      LEN(text) = 0,                      "",                      IFERROR(VALUE(_Split), 0)                   ),                _Result             )          ),       _IsArray, TYPE(text_vector) = 64,       _Result,          IF(             _IsArray,             IFNA(tile(text_vector, LAMBDA(x, fnSingle(x))), ""),             fnSingle(text_vector)          ),       _Result    ) );
-
-noneTrue = LAMBDA(array,[criterion], SUM(--IF(ISOMITTED(criterion), array, MAP(array, criterion))) = 0);
-
-notInText = LAMBDA(TextOrRange,CaseSensitive,Mode, LET(txt, TEXTJOIN("", , TextOrRange), n, LEN(txt), upper, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", lower, "abcdefghijklmnopqrstuvwxyz", digits, "0123456789", txtArr, IF(n, MID(txt, SEQUENCE(n), 1), ""), txtArrUpper, IF(n, MID(UPPER(txt), SEQUENCE(n), 1), ""), upperArr, MID(upper, SEQUENCE(LEN(upper)), 1), lowerArr, MID(lower, SEQUENCE(LEN(lower)), 1), digitsArr, MID(digits, SEQUENCE(LEN(digits)), 1), missingNumbers, IFERROR(TEXTJOIN("", , FILTER(digitsArr, ISNA(MATCH(digitsArr, txtArr, 0)))), ""), missingCI, IFERROR(TEXTJOIN("", , FILTER(upperArr, ISNA(MATCH(upperArr, txtArrUpper, 0)))), ""), presentUpper_CS, MAP(upperArr, LAMBDA(ch, SUM(--EXACT(ch, txtArr)) > 0)), presentLower_CS, MAP(lowerArr, LAMBDA(ch, SUM(--EXACT(ch, txtArr)) > 0)), missingUpper, IFERROR(TEXTJOIN("", , FILTER(upperArr, NOT(presentUpper_CS))), ""), missingLower, IFERROR(TEXTJOIN("", , FILTER(lowerArr, NOT(presentLower_CS))), ""), IF(Mode = 1, missingNumbers, IF(CaseSensitive = 1, VSTACK(missingUpper, missingLower), missingCI))));
 
 NTHINSTANCE = LAMBDA(text,find,number, FIND(CHAR(160), SUBSTITUTE(text, find, CHAR(160), number)));
 
 numToDayOfWeek = LAMBDA(n, TEXT(MOD(n,7)+1,"dddd"));
 
-nxt = LAMBDA(arr,[n],[fill], LET(_n, MAX(1, n), _fill, IF(ISOMITTED(fill), "X", fill), IF(ROWS(arr) = 1, HSTACK(DROP(arr, , _n), IF(SEQUENCE(, _n), _fill)), VSTACK(DROP(arr, _n), IF(SEQUENCE(_n, COLUMNS(arr)), _fill)))));
-
 ONSAMEDIAGONAL = LAMBDA(cell1,cell2, ABS(ROW(cell1) - ROW(cell2)) = ABS(COL(cell2) - COL(cell1)));
-
-perCom = LAMBDA(n,c,[P0C1],[rep], LET(s, SEQUENCE(, n), --MID(REDUCE("", SEQUENCE(c), LAMBDA(a,w, TOCOL(IFS(IF(P0C1, IF(rep, RIGHT(a) <= s & "", RIGHT(a) < s & ""), IF(rep, 1, ISERR(FIND(s, a)))), a & s), 3))), SEQUENCE(, c), 1)));
 
 Permutations = LAMBDA(array, LET(k, COUNTA(array), k)); 
 
@@ -752,29 +714,13 @@ PYTHAG = LAMBDA(a,b, SQRT((a * a) + (b * b)));
 
 PYHAGDIST = LAMBDA(a,b, LET(ac, TAKE(COLROW(a), , 1), ar, TAKE(COLROW(a), , -1), bc, TAKE(COLROW(b), , 1), br, TAKE(COLROW(b), , -1), cr, ABS(br - ar), cc, ABS(bc - ac), PYTHAG(cr, cc)));
 
-rankByFrequency = LAMBDA(rng,[ord],[only],[exclude], LET(     a, UNIQUE(TOCOL(IF(rng = "", "", rng), 3)),     _include, BYROW(a <> TOROW(exclude), LAMBDA(x, PRODUCT(N(x)))),     filtered, IF(ISOMITTED(exclude), a, FILTER(a, _include)),     b, MAP(filtered, LAMBDA(x, SUM(--(IFERROR(x = rng, 0))))),     sorted, SORT(HSTACK(filtered, b), 2, IF(ISOMITTED(ord), -1, ord)),     IF(only, INDEX(sorted, 1, 2), sorted) ));
-
 RATEANNUALTOMONTHLY = LAMBDA(rate,periods, (1 + rate) ^ (1 / periods) - 1);
 
 RATEMONTHLYTOANNUAL = LAMBDA(rate,periods, (1 + rate) ^ periods - 1);
 
-removeBlanks = LAMBDA(array,[remove_rows],[remove_columns], LET(\\LambdaName, "REMOVEBLANKS", \\CommandName, "Remove Blanks", \\Description, "Remove all blank rows and columns.", \\Parameters, {"array","array of values to evaluate for blank rows and columns"}, \\Source, "Excel Robot", _NonBlanks, (--ISBLANK(array) + (array = "")) = 0, _NonBlankColumns, FILTER(SEQUENCE(1, COLUMNS(_NonBlanks)), (BYCOL(--_NonBlanks, LAMBDA(x, SUM(x))) <> 0) + IF(ISOMITTED(remove_columns), 0, 1 - remove_columns)), _NonBlankRows, FILTER(SEQUENCE(ROWS(_NonBlanks)), (BYROW(--_NonBlanks, LAMBDA(x, SUM(x))) <> 0) + IF(ISOMITTED(remove_rows), 0, 1 - remove_rows)), _Result, CHOOSEROWS(CHOOSECOLS(IF(array = "", "", array), _NonBlankColumns), _NonBlankRows), _Result));
-
-removeCols = LAMBDA(array,column_indexes, LET(\\LambdaName, "RemoveCols", \\CommandName, "Remove Columns Of Array", \\Description, "Removes specified columns of array using RemoveCols lambda.", _Seq, SEQUENCE(COLUMNS(array)), _Keep, ISERROR(MATCH(_Seq, TOROW(column_indexes), 0)), _Included, FILTER(_Seq, _Keep, TRUE), _Result, CHOOSECOLS(array, _Included), _Result));
-
-removeRows = LAMBDA(array,row_indexes, LET(\\LambdaName, "RemoveRows", \\CommandName, "Remove Rows Of Array", \\Description, "Removes specified rows of array using RemoveRows lambda.", _Seq, SEQUENCE(ROWS(array)), _Keep, ISERROR(MATCH(_Seq, TOROW(row_indexes), 0)), _Included, FILTER(_Seq, _Keep, TRUE), _Result, CHOOSEROWS(array, _Included), _Result));
-
-replaceZerosWithBlanks = LAMBDA(array, LET(\\LambdaName, "ReplaceZerosWithBlanks", \\CommandName, "Replace Zeros With Blanks", \\Description, "Returns the passed array but with blanks where there were zeros.", IF(array = 0, "", array)));
-
 REVERSE_H =LAMBDA(array, LET(l, COUNTA(TAKE(array, 1)), s, SEQUENCE(, l), SORTBY(array, s, -1)));
 
 REVERSE_V = LAMBDA(array, LET(l, COUNTA(TAKE(array, , 1)), s, SEQUENCE(l), SORTBY(array, s, -1)));
-
-reverseColumns = LAMBDA(array, LET(\\LambdaName, "ReverseColumns", \\CommandName, "Reverse Columns", \\Description, "Returns an array in reverse column order.", SORTBY(array, SEQUENCE(1, COLUMNS(array)), -1)));
-
-reverseRows = LAMBDA(array, LET(\\LambdaName, "ReverseRows", \\CommandName, "Reverse Rows", \\Description, "Returns array in reverse row order.", SORTBY(array, SEQUENCE(ROWS(array)), -1)));
-
-reverseString = LAMBDA(txt, TEXTJOIN("", , MID(txt, SEQUENCE(LEN(txt), , LEN(txt), -1), 1)));
 
 RightAlignedArray_byJaqKennedy = LAMBDA(input,LET(\\LambdaName, "RightAlignedArray", \\CommandName, "Align array to right", \\Description, "Aligns array to the right with blanks to left", \\Source, "Jaq Kennedy", _ColsByRow, BYROW(input, COUNT), _Rows, ROWS(input), _Cols, COLUMNS(input), _ColIndex, IF(MOD(SEQUENCE(_Rows, _Cols) - 1, _Cols) + 1 - _Cols + _ColsByRow <= 0, -1, MOD(SEQUENCE(_Rows, _Cols) - 1, _Cols) + 1 - _Cols + _ColsByRow), _RowIndex, SEQUENCE(_Rows), _Result, IFERROR(INDEX(input, _RowIndex, _ColIndex), ""), _Result));
 
@@ -786,30 +732,11 @@ ROWCOL = LAMBDA(cell_coordinates,TEXTSPLIT(ROW(INDIRECT(cell_coordinates)) & ";"
 
 rowFromAddress = LAMBDA(add, ROW(INDIRECT(add)));
 
-runningProduct = LAMBDA(array, LET(\\LambdaName, "RunningProduct", \\CommandName, "Running Product", \\Description, "Returns vector of running product.", res, SCAN(1, array, LAMBDA(s,a, s * a)), res));
-
-runningTotalsByColumn = LAMBDA(array, LET(\\LambdaName, "RunningTotalsByColumn", Result, MAKEARRAY(ROWS(array), COLUMNS(array), LAMBDA(x,y, SUM(INDEX(array, SEQUENCE(x), y)))), Result));
-
-runningTotalsByRow = LAMBDA(array, LET(\\LambdaName, "RunningTotalsByRow", Result, MAKEARRAY(ROWS(array), COLUMNS(array), LAMBDA(x,y, SUM(INDEX(array, x, SEQUENCE(1, y))))), Result));
-
-rwClNm = LAMBDA(arr,[rwMult],[clMult], IF(ISOMITTED(rwMult), 1000, rwMult) * SEQUENCE(ROWS(arr)) + IF(ISOMITTED(clMult), 1, clMult) * SEQUENCE(, COLUMNS(arr)));
-
 SET = LAMBDA(array,val,[posx],[posy], LET(posxx, IF(ISOMITTED(posx), 1, posx), posyy, IF(ISOMITTED(posy), 1, posy), arrr, TOCOL(array), ax, COUNTA(TAKE(array, , 1)), ay, COUNTA(TAKE(array, 1)), pos, (ay * posxx) - ay + posyy, a, TAKE(arrr, pos - 1), b, TAKE(arrr, -COUNTA(arrr) + pos), c, IF(AND(posxx = 1, posyy = 1), VSTACK(val, b), IF(AND(posx = ax, posy = ay), VSTACK(a, val), IF(OR(posx > ax, posy > ay), NA(), VSTACK(a, val, b)))), WRAPROWS(c, ay)));
 
 SHIFT = LAMBDA(cell_coordinates,horizontal_moves,vertical_moves, ADDRESS(ROW(INDIRECT(cell_coordinates)) + vertical_moves, COLUMN(INDIRECT(cell_coordinates)) + horizontal_moves, 4, 1));
 
 SHIFT_OBB = LAMBDA(cell_coordinates,horizontal_moves,vertical_moves, ADDRESS(IF(ROW(INDIRECT(cell_coordinates)) + horizontal_moves < 1, 1, ROW(INDIRECT(cell_coordinates)) + horizontal_moves), IF(COLUMN(INDIRECT(cell_coordinates)) + vertical_moves < 1, 1, COLUMN(INDIRECT(cell_coordinates)) + vertical_moves), 4, 1));
-
-showFormulas = LAMBDA(Reference, LET(c, Reference, f, TOCOL(ADDRESS(ROW(c), COLUMN(c), 4) & ": " & FORMULATEXT(c), 3), r, DROP(REDUCE({""}, f, LAMBDA(s,x, VSTACK(s, TEXTSPLIT(x, , "
-")))), 1), r));
-
-splitByCharacter = LAMBDA(wrd,[len],[split], LET(_len, MAX(len, 1), IF(split, MID(wrd, SEQUENCE(1, LEN(wrd) / _len, 1, _len), _len), MID(wrd, SEQUENCE(1, LEN(wrd) - _len + 1), _len))));
-
-splitNumbersFromText = LAMBDA(text_vector,[ignore_commas], LET(\\LambdaName, "SplitNumbersFromText", fnSplit, LAMBDA(text,[ignore_commas],[transpose_result], LET(_chars, MID(text, SEQUENCE(LEN(text)), 1), _isNumber, LET(codes, CODE(_chars), priorCodes, VSTACK("", DROP(codes, -1)), nextCodes, VSTACK(DROP(codes, 1), ""), fnIsDigit, LAMBDA(x, (x >= CODE("0")) * (x <= CODE("9")) = 1), IsPeriod, codes = CODE("."), IsComma, (codes = CODE(",")) * ((ISOMITTED(ignore_commas) + (ignore_commas = FALSE))) <> 0, fnIsDigit(codes) + (IsPeriod + IsComma) * fnIsDigit(priorCodes) * fnIsDigit(nextCodes)), _flip, VSTACK(DROP(_isNumber, 1) <> DROP(_isNumber, -1), FALSE), _addDelimiter, _chars & IF(_flip, "‡", ""), _split, TEXTSPLIT(CONCAT(_addDelimiter), "‡"), _toNumbers, IFERROR(--_split, _split), _result, IF(transpose_result, TRANSPOSE(_toNumbers), _toNumbers), _result)), _Transpose, COLUMNS(text_vector) <> 1, _IsArray, TYPE(text_vector) = 64, _Result, IF(_IsArray, IFNA(tile(text_vector, LAMBDA(x, fnSplit(x, ignore_commas, _Transpose))), ""), fnSplit(text_vector, ignore_commas, FALSE)), _Result));
-
-sumByColumn = LAMBDA(array, BYCOL(array, LAMBDA(col, SUM(col))));
-
-sumByRow = LAMBDA(array, BYROW(array, LAMBDA(col, SUM(col))));
 
 SumDist = LAMBDA(sum_distance_traveled, LET(
    \\LambdaName, "SumDist",
@@ -857,10 +784,6 @@ SumDistFromStart = LAMBDA(sum_distance_traveled, LET(
    _Result
 ));
 
-sumEven = LAMBDA(arr, SUM(IF(ISEVEN(+arr), +arr, 0)));
-
-sumOdd = LAMBDA(arr, SUM(IF(ISODD(+arr), +arr, 0)));
-
 SWAP = LAMBDA(array,pos_one_x,pos_one_y,pos_two_x,pos_two_y, LET(a, INDEX(array, pos_one_x, pos_one_y), b, INDEX(array, pos_two_x, pos_two_y), arrr, SET(array, b, pos_one_x, pos_one_y), SET(arrr, a, pos_two_x, pos_two_y)));
 
 TEXTBETWEEN = LAMBDA(text,start,end, TEXTAFTER(TEXTBEFORE(text, end), start));
@@ -868,10 +791,6 @@ TEXTBETWEEN = LAMBDA(text,start,end, TEXTAFTER(TEXTBEFORE(text, end), start));
 TEXTREVERSE = LAMBDA(string, LET(stringLength, LEN(string), substring, RIGHT(string, stringLength - 1), firstChar, LEFT(string, 1), IF(LEN(string) = 0, string, TEXTREVERSE(substring) & firstChar)));
 
 Thunk = LAMBDA(x, LAMBDA(x));
-
-tile = LAMBDA(params,function, LET(\\LambdaName, "TILE", \\CommandName, "Tile", \\Description, "Tile the outputs of a single-parameter function given an array map of parameters.", \\Parameters, {"params","array of parameters arranged how function results to be tiled";"function","single-parameter Lambda name or function"}, \\Source, "Written by @ExcelRobot but inspired by Owen Price's STACKER lambda.", firstrow, function(INDEX(params, 1, 1)), stacker, LAMBDA(stack,param, VSTACK(stack, function(param))), firstcol, IF(ROWS(params) = 1, firstrow, REDUCE(firstrow, DROP(TAKE(params, , 1), 1), stacker)), Result, IF(COLUMNS(params) = 1, firstcol, HSTACK(firstcol, tile(DROP(params, , 1), function))), Result));
-
-unpivot = LAMBDA(table,[columns_to_unpivot],[attribute_name],[value_name],[remove_blanks], LET(_ColumnsToUnpivot, IF(ISOMITTED(columns_to_unpivot), DROP(TAKE(table, 1), , 1), columns_to_unpivot), _AttributeLabel, IF(ISOMITTED(attribute_name), "Attribute", attribute_name), _ValueLabel, IF(ISOMITTED(value_name), "Value", value_name), _FirstColumnToUnpivot, MATCH(INDEX(_ColumnsToUnpivot, , 1), INDEX(table, 1, ), 0), _UnpivotColumnCount, COLUMNS(_ColumnsToUnpivot), _ColumnNumbers, SEQUENCE(1, COLUMNS(table)), _IncludeColumns, (_ColumnNumbers >= _FirstColumnToUnpivot) * (_ColumnNumbers < _FirstColumnToUnpivot + _UnpivotColumnCount), _UnpivotColumns, FILTER(_ColumnNumbers, _IncludeColumns), _OtherColumns, FILTER(_ColumnNumbers, NOT(_IncludeColumns)), _FullOuterJoin, crossJoin(CHOOSECOLS(table, _OtherColumns), VSTACK(_AttributeLabel, TRANSPOSE(_ColumnsToUnpivot)), TRUE), _WithValues, HSTACK(_FullOuterJoin, VSTACK(_ValueLabel, TOCOL(DROP(CHOOSECOLS(table, _UnpivotColumns), 1)))), _RemoveBlanks, IF(OR(ISOMITTED(remove_blanks), remove_blanks), FILTER(_WithValues, INDEX(_WithValues, , COLUMNS(_WithValues)) <> ""), IF(_WithValues = "", "", _WithValues)), _ColumnOrder, LET(n, COLUMNS(_RemoveBlanks), s, SEQUENCE(1, n), IFS(s < _FirstColumnToUnpivot, s, s < _FirstColumnToUnpivot + 2, s + n - _FirstColumnToUnpivot - 1, TRUE, s - 2)), _Result, CHOOSECOLS(_RemoveBlanks, _ColumnOrder), _Result));
 
 XLOOKUP2D_byBendeLeon = LAMBDA(DataSource,RLU,CLU,[RowArray],[ColumnArray],[MatchMode],[SearchMode],[IfNotFound], LET(
    \\LambdaName, "XLOOKUP2D_byBendeLeon",
@@ -954,4 +873,29 @@ AddressofCells = LAMBDA(array,MAP(array,LAMBDA(a,ADDRESS(ROW(a),COLUMN(a),4))));
 
 distanceBetweenTwoCells = LAMBDA(StartCell,EndCell,[DistanceType],   LET(     RowDist, ABS(ROW(StartCell) - ROW(EndCell)),     ColDist, ABS(COLUMN(StartCell) - COLUMN(EndCell)),      DiagonalDistance, MAX(RowDist, ColDist),     ManhattanDistance, RowDist + ColDist,     EuclideanDistance, SQRT(RowDist^2 + ColDist^2),      IF(       DistanceType = 1,       ManhattanDistance,       IF(         DistanceType = 2,         EuclideanDistance,         DiagonalDistance       )     )   ) );
 
-clostestOnMap = LAMBDA(cell,mp,Extension,[Dist_NoDiags_Pythag],[item],[Order_RCaa_CRaa_RCad_CRad_RCda_CRda_RCdd_CRdd],LET(maxrow,ROWS(mp),maxcol,COLUMNS(mp),visual,INDEX(mp,MAX(ROW(INDIRECT(cell))-MIN(ROW(mp))+1-Extension,1),MAX(COLUMN(INDIRECT(cell))-MIN(COLUMN(mp))+1-Extension,1)):INDEX(mp,MIN(ROW(INDIRECT(cell))-MIN(ROW(mp))+1+Extension,maxrow),MIN(COLUMN(INDIRECT(cell))-MIN(COLUMN(mp))+1+Extension,maxcol)), addr,TOCOL(AddressOfCells(visual)), rowdist,ROW(INDIRECT(addr))-ROW(INDIRECT(cell)), coldist,COLUMN(INDIRECT(addr))-COLUMN(INDIRECT(cell)), totdist,IF(ISOMITTED(Dist_NoDiags_Pythag),Distance(cell,addr),Distance(cell,addr,Dist_NoDiags_Pythag)), table,HSTACK(TOCOL(visual),addr,totdist), cleantable,SORTBY(table,totdist,1), ordered,SORTBY(table,totdist,1,IF(ISODD(Order_RCaa_CRaa_RCad_CRad_RCda_CRda_RCdd_CRdd),rowdist,coldist),IF(Order_RCaa_CRaa_RCad_CRad_RCda_CRda_RCdd_CRdd<=4,1,-1),IF(ISODD(Order_RCaa_CRaa_RCad_CRad_RCda_CRda_RCdd_CRdd),coldist,rowdist),IF(MOD(Order_RCaa_CRaa_RCad_CRad_RCda_CRda_RCdd_CRdd-1,4)<2,1,-1)), omitblanks,FILTER(IF(ISOMITTED(Order_RCaa_CRaa_RCad_CRad_RCda_CRda_RCdd_CRdd),cleantable,ordered),IFERROR(TAKE(IF(ISOMITTED(Order_RCaa_CRaa_RCad_CRad_RCda_CRda_RCdd_CRdd),cleantable,ordered),,1)<>"",FALSE)), end,IF(ISOMITTED(item),omitblanks,FILTER(omitblanks,CHOOSECOLS(omitblanks,1)=item)), FILTER(end,TAKE(end,,-1)<=Extension)))
+clostestOnMap = LAMBDA(cell,mp,Extension,[Dist_NoDiags_Pythag],[item],[Order_RCaa_CRaa_RCad_CRad_RCda_CRda_RCdd_CRdd],LET(maxrow,ROWS(mp),maxcol,COLUMNS(mp),visual,INDEX(mp,MAX(ROW(INDIRECT(cell))-MIN(ROW(mp))+1-Extension,1),MAX(COLUMN(INDIRECT(cell))-MIN(COLUMN(mp))+1-Extension,1)):INDEX(mp,MIN(ROW(INDIRECT(cell))-MIN(ROW(mp))+1+Extension,maxrow),MIN(COLUMN(INDIRECT(cell))-MIN(COLUMN(mp))+1+Extension,maxcol)), addr,TOCOL(AddressOfCells(visual)), rowdist,ROW(INDIRECT(addr))-ROW(INDIRECT(cell)), coldist,COLUMN(INDIRECT(addr))-COLUMN(INDIRECT(cell)), totdist,IF(ISOMITTED(Dist_NoDiags_Pythag),Distance(cell,addr),Distance(cell,addr,Dist_NoDiags_Pythag)), table,HSTACK(TOCOL(visual),addr,totdist), cleantable,SORTBY(table,totdist,1), ordered,SORTBY(table,totdist,1,IF(ISODD(Order_RCaa_CRaa_RCad_CRad_RCda_CRda_RCdd_CRdd),rowdist,coldist),IF(Order_RCaa_CRaa_RCad_CRad_RCda_CRda_RCdd_CRdd<=4,1,-1),IF(ISODD(Order_RCaa_CRaa_RCad_CRad_RCda_CRda_RCdd_CRdd),coldist,rowdist),IF(MOD(Order_RCaa_CRaa_RCad_CRad_RCda_CRda_RCdd_CRdd-1,4)<2,1,-1)), omitblanks,FILTER(IF(ISOMITTED(Order_RCaa_CRaa_RCad_CRad_RCda_CRda_RCdd_CRdd),cleantable,ordered),IFERROR(TAKE(IF(ISOMITTED(Order_RCaa_CRaa_RCad_CRad_RCda_CRda_RCdd_CRdd),cleantable,ordered),,1)<>"",FALSE)), end,IF(ISOMITTED(item),omitblanks,FILTER(omitblanks,CHOOSECOLS(omitblanks,1)=item)), FILTER(end,TAKE(end,,-1)<=Extension)));
+
+arrowTable = LAMBDA(LET(
+   \\LambdaName, "ARROWTABLE",
+   _Result,
+   {
+   "Direction","X","Y";
+   "→",1,0;
+   "←",-1,0;
+   "↑",0,1;
+   "↓",0,-1;
+   "E",1,0;
+   "W",-1,0;
+   "N",0,1;
+   "S",0,-1
+   },
+   _Result
+));
+
+Loc.COLROW = LAMBDA(ref,
+ LET(
+   \\LambdaName,"LOC.COLROW",
+   HSTACK(COLUMN(ref),ROW(ref))
+));
+
+MatchRowCol = LAMBDA(ToFind, Range, LET( r, MATCH(ToFind, INDEX(Range,,1), 0), c, MATCH(ToFind, INDEX(Range,1,), 0), HSTACK(r, c) ) )
