@@ -1,9 +1,5 @@
-// --- Workbook module ---
-// A file of name definitions of the form:
-//    name = definition;
-
 /* Returns a list of die */
-dice = {"⚀";"⚁";"⚂";"⚃";"⚄";"⚅"};
+dice = {"⚀","⚁","⚂","⚃","⚄","⚅"};
 
 /* Gets the number of pips on a die */
 pips = LAMBDA(d, UNICODE(d) - 9855);
