@@ -736,7 +736,7 @@ notInText = LAMBDA(TextOrRange,CaseSensitive,Mode, LET(txt, TEXTJOIN("", , TextO
 
 NTHINSTANCE = LAMBDA(text,find,number, FIND(CHAR(160), SUBSTITUTE(text, find, CHAR(160), number)));
 
-numToDayOfWeek = LAMBDA(NumList,LET(\\LambdaName, "TDay", \\CommandName, "Get day of week as text", \\Description, "Gets day of week as text - Monday = 1...Sunday = 7", \\Source, "Jaq Kennedy", TEXT(XMOD_byJaqKennedy(NumList + 1, 7), "Dddd")));
+numToDayOfWeek = LAMBDA(n, TEXT(MOD(n,7)+1,"dddd"));
 
 nxt = LAMBDA(arr,[n],[fill], LET(_n, MAX(1, n), _fill, IF(ISOMITTED(fill), "X", fill), IF(ROWS(arr) = 1, HSTACK(DROP(arr, , _n), IF(SEQUENCE(, _n), _fill)), VSTACK(DROP(arr, _n), IF(SEQUENCE(_n, COLUMNS(arr)), _fill)))));
 
