@@ -612,7 +612,7 @@ DROPCOL = LAMBDA(array,column, LET(
 
 DROPCOL_byLiannaGerrish = LAMBDA(array,column,LET(\\LambdaName, "DROPCOL", \\CommandName, \\LambdaName, \\Description, "Drops a column from an array", \\Source, "Lianna", MAKEARRAY(ROWS(array), COLUMNS(array) - 1, LAMBDA(i,j, INDEX(array, i, IF(j < column, j, j + 1))))));
 
-easyIndirect = LAMBDA(cell,[sheetname],IF(ISOMITTED(sheetname), INDIRECT(cell), INDIRECT(sheetname & "!" & cell)));
+easyIndirect = LAMBDA(cell,[sheetname], LET( s, IF(ISOMITTED(sheetname),"","'" & sheetname & "'!"), INDIRECT(s & cell) ));
 
 extractLetters = LAMBDA(text,REDUCE("", MID(text, SEQUENCE(LEN(text), 1), 1), LAMBDA(x,y, IF(ISNUMBER(VALUE(y)), x, x & y))));
 
